@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Help us build a better phone for kids. Share your experiences as a parent dealing with children's technology use.">
+  <title>BetterPhone Parent Survey | Help Us Build a Better Phone for Kids</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="survey-container">
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-text" id="progressText">Getting started...</div>
+    </div>
+
+    <!-- Survey Card -->
+    <div class="survey-card">
+      <form id="surveyForm">
+        
+        <!-- INTRO -->
+        <div class="step active" data-step="intro">
+          <div class="step-label">Welcome</div>
+          <h1 class="step-title">Help Us Build a Better Phone for Kids</h1>
+          <p class="step-description">
+            We're a group of parents and child development researchers working to create a phone that puts children's development and well-being first — one that thoughtfully accounts for technology's real impact on children's minds.
+          </p>
+          <p class="step-description">
+            Please take a few minutes to share your experiences so we can build something that truly serves families.
+          </p>
+          <div class="btn-group">
+            <button type="button" class="btn btn-primary" onclick="nextStep()">
+              Let's Begin
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- PAIN CHECK -->
+        <div class="step" data-step="pain-check">
+          <div class="step-label">Quick Check</div>
+          <h2 class="step-title">Before we continue...</h2>
+          <p class="step-description">We need to make sure this survey is right for you:</p>
+          <p class="step-description"><strong>Is your child's relationship with their phone/device causing you significant stress or concern on at least a daily or weekly basis?</strong></p>
+          
+          <div class="option-group">
+            <div class="option-item">
+              <input type="radio" name="painCheck" id="painYes" value="yes">
+              <label for="painYes">Yes, this is a regular source of stress and problems in our family</label>
+            </div>
+            <div class="option-item">
+              <input type="radio" name="painCheck" id="painSometimes" value="sometimes">
+              <label for="painSometimes">Sometimes</label>
+            </div>
+            <div class="option-item">
+              <input type="radio" name="painCheck" id="painNo" value="no">
+              <label for="painNo">No</label>
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="handlePainCheck()" id="painCheckNext" disabled>Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 1: Voice - Open-ended -->
+        <div class="step" data-step="1">
+          <div class="step-label">Step 1 of 10</div>
+          <h2 class="step-title">Tell us what's going on</h2>
+          <p class="step-description">
+            What is the most challenging aspect of your child's relationship with screens or technology? Please share all the painful parts openly and honestly — feel free to just brain dump everything you feel. We are here to listen without judgment.
+          </p>
+          
+          <div class="voice-placeholder">
+            <div class="voice-placeholder-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </div>
+            <div class="voice-placeholder-title">Voice Recording Coming Soon</div>
+            <div class="voice-placeholder-subtitle">This feature will allow you to share your story in your own voice</div>
+          </div>
+          
+          <p class="helper-text">Talk about how it feels, specific moments, what's happening day-to-day. Whatever comes to mind. This part is open-ended as we want to hear what comes to mind for you first.</p>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 2: Checkboxes - Issues -->
+        <div class="step" data-step="2">
+          <div class="step-label">Step 2 of 10</div>
+          <h2 class="step-title">Have you experienced any of these issues?</h2>
+          <p class="step-description">Select all that apply to your situation.</p>
+          
+          <div class="checkbox-grid" id="issuesGrid">
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue1" value="Sleep problems">
+              <label for="issue1">Sleep problems</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue2" value="Grades dropping">
+              <label for="issue2">Grades dropping</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue3" value="Mood swings / attitude changes">
+              <label for="issue3">Mood swings / attitude changes</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue4" value="Daily fights about the phone">
+              <label for="issue4">Daily fights about the phone</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue5" value="Exposed to inappropriate content">
+              <label for="issue5">Exposed to inappropriate content</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue6" value="Can't focus on homework">
+              <label for="issue6">Can't focus on homework</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue7" value="Won't put it down at meals / family time">
+              <label for="issue7">Won't put it down at meals / family time</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue8" value="Social media obsession">
+              <label for="issue8">Social media obsession</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue9" value="Gaming obsession">
+              <label for="issue9">Gaming obsession</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue10" value="Contacted by strangers">
+              <label for="issue10">Contacted by strangers</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue11" value="Cyberbullying">
+              <label for="issue11">Cyberbullying</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue12" value="Secretive / hiding phone">
+              <label for="issue12">Secretive / hiding phone</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue13" value="Lost interest in hobbies / friends">
+              <label for="issue13">Lost interest in hobbies / friends</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="issues" id="issue14" value="Physical issues (eyes, posture, headaches)">
+              <label for="issue14">Physical issues (eyes, posture, headaches)</label>
+            </div>
+          </div>
+          
+          <div class="input-group" style="margin-top: var(--space-lg);">
+            <label for="issueOther">Other issues (optional)</label>
+            <input type="text" class="text-input" id="issueOther" name="issueOther" placeholder="Describe any other issues...">
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="goToRanking()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Ranking -->
+        <div class="step" data-step="3">
+          <div class="step-label">Step 3 of 10</div>
+          <h2 class="step-title">Rank your pain points</h2>
+          <p class="step-description">Drag to reorder these from most painful (top) to least painful (bottom).</p>
+          
+          <div class="ranking-list" id="rankingList">
+            <!-- Dynamically populated based on Step 2 selections -->
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Voice - Urgency -->
+        <div class="step" data-step="4">
+          <div class="step-label">Step 4 of 10</div>
+          <h2 class="step-title">Tell us more about why these are painful</h2>
+          <p class="step-description">
+            Can you elaborate on why those were the most painful problems for you? Also, how urgent would you say solving these problems is for you?
+          </p>
+          
+          <div class="voice-placeholder">
+            <div class="voice-placeholder-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </div>
+            <div class="voice-placeholder-title">Voice Recording Coming Soon</div>
+            <div class="voice-placeholder-subtitle">Share your thoughts in your own voice</div>
+          </div>
+          
+          <p class="helper-text">Consider: On a scale of 1-10, how urgent is solving this? What happens if nothing changes in 6 months? How soon do you need this solved?</p>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 5: Voice - Solutions Tried -->
+        <div class="step" data-step="5">
+          <div class="step-label">Step 5 of 10</div>
+          <h2 class="step-title">What have you tried?</h2>
+          <p class="step-description">
+            Tell us what solutions you've tried, what happened, and how much you've spent trying to fix this.
+          </p>
+          
+          <div class="voice-placeholder">
+            <div class="voice-placeholder-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </div>
+            <div class="voice-placeholder-title">Voice Recording Coming Soon</div>
+            <div class="voice-placeholder-subtitle">Share your experiences in your own voice</div>
+          </div>
+          
+          <p class="helper-text">Any apps, rules, taking the phone away, other devices — whatever you've tried.</p>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 6: Voice - Switching Concerns -->
+        <div class="step" data-step="6">
+          <div class="step-label">Step 6 of 10</div>
+          <h2 class="step-title">What would make switching hard?</h2>
+          <p class="step-description">
+            If you switched your kid to a different phone, what would happen?
+          </p>
+          
+          <div class="voice-placeholder">
+            <div class="voice-placeholder-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </div>
+            <div class="voice-placeholder-title">Voice Recording Coming Soon</div>
+            <div class="voice-placeholder-subtitle">Share your concerns in your own voice</div>
+          </div>
+          
+          <p class="helper-text">Consider: How would they react? What pushback would you get? What would make it easier or harder to make the switch? Is there anything that would hold you back?</p>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 7: Checkboxes - Benefits -->
+        <div class="step" data-step="7">
+          <div class="step-label">Step 7 of 10</div>
+          <h2 class="step-title">What benefits would matter most?</h2>
+          <p class="step-description">Select your top 3-5 most important features.</p>
+          
+          <div class="selection-counter" id="benefitCounter">0 of 3-5 selected</div>
+          
+          <div class="checkbox-grid" id="benefitsGrid">
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit1" value="Screen time limits">
+              <label for="benefit1">Screen time limits</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit2" value="App blocking">
+              <label for="benefit2">App blocking</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit3" value="Content filtering">
+              <label for="benefit3">Content filtering</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit4" value="Location tracking">
+              <label for="benefit4">Location tracking</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit5" value="No social media">
+              <label for="benefit5">No social media</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit6" value="Calling & texting only">
+              <label for="benefit6">Calling & texting only</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit7" value="Parent dashboard">
+              <label for="benefit7">Parent dashboard</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit8" value="Homework mode">
+              <label for="benefit8">Homework mode</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit9" value="Sleep mode / bedtime controls">
+              <label for="benefit9">Sleep mode / bedtime controls</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit10" value="Approved contacts only">
+              <label for="benefit10">Approved contacts only</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit11" value="Educational apps only">
+              <label for="benefit11">Educational apps only</label>
+            </div>
+            <div class="option-item checkbox">
+              <input type="checkbox" name="benefits" id="benefit12" value="Emergency features">
+              <label for="benefit12">Emergency features</label>
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()" id="benefitNext">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 8: Text - Ad Click Motivation -->
+        <div class="step" data-step="8">
+          <div class="step-label">Step 8 of 10</div>
+          <h2 class="step-title">What brought you here?</h2>
+          <p class="step-description">Help us understand what resonated with you.</p>
+          
+          <div class="input-group">
+            <label for="clickMotivation">What made you click on this survey?</label>
+            <textarea class="textarea-input" id="clickMotivation" name="clickMotivation" placeholder="Tell us what caught your attention..."></textarea>
+          </div>
+          
+          <div class="input-group">
+            <label for="clickResistance">What almost stopped you from clicking? (if anything)</label>
+            <textarea class="textarea-input" id="clickResistance" name="clickResistance" placeholder="Was there any hesitation?"></textarea>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 9: Optional Open-ended -->
+        <div class="step" data-step="9">
+          <div class="step-label">Step 9 of 10</div>
+          <h2 class="step-title">Anything else?</h2>
+          <p class="step-description">Is there anything you think might be interesting for us to learn that we didn't ask about?</p>
+          
+          <div class="input-group">
+            <textarea class="textarea-input" id="anythingElse" name="anythingElse" placeholder="Share any additional thoughts... (optional)"></textarea>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-skip" onclick="nextStep()">Skip this question</button>
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- STEP 10: Demographics -->
+        <div class="step" data-step="10">
+          <div class="step-label">Step 10 of 10</div>
+          <h2 class="step-title">Quick background</h2>
+          <p class="step-description">Just a few quick questions to help us understand our community better.</p>
+          
+          <div class="input-group">
+            <label for="kidAges">How old are your kids?</label>
+            <select class="select-input" id="kidAges" name="kidAges">
+              <option value="">Select age range...</option>
+              <option value="under-5">Under 5</option>
+              <option value="5-8">5-8 years</option>
+              <option value="9-12">9-12 years</option>
+              <option value="13-15">13-15 years</option>
+              <option value="16-18">16-18 years</option>
+              <option value="multiple">Multiple age ranges</option>
+            </select>
+          </div>
+          
+          <div class="input-group">
+            <label for="kidsWithPhones">How many of your children have phones or devices?</label>
+            <select class="select-input" id="kidsWithPhones" name="kidsWithPhones">
+              <option value="">Select...</option>
+              <option value="1">1 child</option>
+              <option value="2">2 children</option>
+              <option value="3">3 children</option>
+              <option value="4+">4 or more</option>
+            </select>
+          </div>
+          
+          <div class="input-group">
+            <label for="currentDevice">What phone/device do they currently have?</label>
+            <select class="select-input" id="currentDevice" name="currentDevice">
+              <option value="">Select...</option>
+              <option value="iphone">iPhone</option>
+              <option value="android">Android phone</option>
+              <option value="tablet">Tablet only</option>
+              <option value="flip">Flip phone / basic phone</option>
+              <option value="multiple">Multiple different devices</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          
+          <div class="input-group">
+            <label for="deviceDuration">How long have they had it?</label>
+            <select class="select-input" id="deviceDuration" name="deviceDuration">
+              <option value="">Select...</option>
+              <option value="less-6mo">Less than 6 months</option>
+              <option value="6mo-1yr">6 months - 1 year</option>
+              <option value="1-2yr">1-2 years</option>
+              <option value="2-3yr">2-3 years</option>
+              <option value="3+yr">3+ years</option>
+            </select>
+          </div>
+          
+          <div class="input-group">
+            <label for="dailyUsage">How many hours per day do they spend on it?</label>
+            <select class="select-input" id="dailyUsage" name="dailyUsage">
+              <option value="">Select...</option>
+              <option value="1-2">1-2 hours</option>
+              <option value="3-4">3-4 hours</option>
+              <option value="5-6">5-6 hours</option>
+              <option value="7-8">7-8 hours</option>
+              <option value="8+">More than 8 hours</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="familyStructure">Family structure</label>
+            <select class="select-input" id="familyStructure" name="familyStructure">
+              <option value="">Select...</option>
+              <option value="two-parent">Two-parent household</option>
+              <option value="single-parent">Single-parent household</option>
+              <option value="blended">Blended family</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          
+          <div class="input-group">
+            <label for="householdIncome">Household income range</label>
+            <select class="select-input" id="householdIncome" name="householdIncome">
+              <option value="">Select...</option>
+              <option value="under-50k">Under $50,000</option>
+              <option value="50-100k">$50,000 - $100,000</option>
+              <option value="100-150k">$100,000 - $150,000</option>
+              <option value="150-200k">$150,000 - $200,000</option>
+              <option value="200k+">$200,000+</option>
+              <option value="prefer-not">Prefer not to say</option>
+            </select>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+          </div>
+        </div>
+
+        <!-- EMAIL OPT-IN -->
+        <div class="step" data-step="email">
+          <div class="step-label">Almost done!</div>
+          <h2 class="step-title">Stay in touch</h2>
+          <p class="step-description">Can we contact you with updates, follow-up questions, or to share early versions of our phone?</p>
+          
+          <div class="email-group">
+            <label class="email-checkbox">
+              <input type="checkbox" id="emailOptIn" name="emailOptIn">
+              <span>Yes, I'd like to hear from you</span>
+            </label>
+            
+            <div class="input-group" id="emailInputGroup" style="display: none;">
+              <label for="email">Your email address</label>
+              <input type="email" class="text-input" id="email" name="email" placeholder="your@email.com">
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" onclick="submitSurvey()">Submit Survey</button>
+          </div>
+        </div>
+
+        <!-- THANK YOU -->
+        <div class="step" data-step="thank-you">
+          <div class="thank-you-message">
+            <div class="thank-you-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <h2 class="step-title">Thank you 🙏</h2>
+            <p class="step-description">
+              Your answers will directly shape what we build and we really appreciate your time. We're in this together.
+            </p>
+          </div>
+        </div>
+
+        <!-- THANK YOU (Email Only - for "No" answer) -->
+        <div class="step" data-step="thank-you-email-only">
+          <div class="thank-you-message">
+            <h2 class="step-title">Thanks for stopping by!</h2>
+            <p class="step-description">
+              It sounds like this survey might not be the right fit for you right now, but we'd love to stay connected.
+            </p>
+            
+            <div class="email-group" style="margin-top: var(--space-xl); text-align: left;">
+              <label class="email-checkbox">
+                <input type="checkbox" id="emailOptInOnly" name="emailOptInOnly">
+                <span>Keep me updated on your progress</span>
+              </label>
+              
+              <div class="input-group" id="emailInputGroupOnly" style="display: none;">
+                <label for="emailOnly">Your email address</label>
+                <input type="email" class="text-input" id="emailOnly" name="emailOnly" placeholder="your@email.com">
+              </div>
+              
+              <button type="button" class="btn btn-primary" onclick="submitEmailOnly()" style="margin-top: var(--space-md);">Submit</button>
+            </div>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

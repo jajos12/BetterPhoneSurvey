@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import { formatDuration } from '@/lib/utils';
+import { useSurvey } from '@/components/providers/SurveyProvider';
 
 interface VoiceRecorderProps {
     sessionId: string;
@@ -19,6 +20,7 @@ export function VoiceRecorder({
     onRecordingComplete,
     onUploadComplete
 }: VoiceRecorderProps) {
+    const { updateFormData } = useSurvey();
     const [state, setState] = useState<RecordingState>('idle');
     const [duration, setDuration] = useState(0);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -67,13 +69,13 @@ export function VoiceRecorder({
                 body: JSON.stringify({ recordingId: data.recordingId }),
             });
 
-            setUploadStatus('✓ Response saved');
+            setUploadStatus('✓ Saved');
             setState('recorded');
             onUploadComplete?.(data.url, data.recordingId);
 
         } catch (err) {
             console.error('Upload failed:', err);
-            setError('Upload failed. Your recording is saved locally.');
+            setError('Upload failed. Recording saved locally.');
             setState('recorded');
         }
     }, [sessionId, stepNumber, onUploadComplete]);
@@ -109,6 +111,11 @@ export function VoiceRecorder({
                 setDuration(finalDuration);
                 onRecordingComplete?.(blob, finalDuration);
 
+                // Enable Continue button immediately - don't wait for upload
+                const recordingKey = `step${stepNumber}Recording`;
+                updateFormData({ [recordingKey]: true });
+
+                // Upload in background - user can continue without waiting
                 uploadRecording(blob, actualMimeType);
 
                 streamRef.current?.getTracks().forEach(track => track.stop());

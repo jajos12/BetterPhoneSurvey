@@ -46,46 +46,86 @@ export default async function ResponseDetailPage({
     const formData = response.form_data || {};
 
     return (
-        <div>
-            <Link href="/admin/responses" className="text-primary hover:underline text-sm mb-4 inline-block">
-                ← Back to responses
+        <div className="max-w-4xl">
+            {/* Back link */}
+            <Link
+                href="/admin/responses"
+                className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors text-sm mb-6"
+            >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to responses
             </Link>
 
-            <div className="flex justify-between items-start mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold mb-2">
-                        {response.email || 'Anonymous Response'}
-                    </h1>
-                    <p className="text-text-muted text-sm">
-                        Session: {response.session_id}
-                    </p>
+            {/* Header */}
+            <div className="bg-[#16161d] border border-white/10 rounded-xl p-6 mb-5">
+                <div className="flex items-start justify-between mb-5">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${response.is_completed
+                                ? 'bg-green-500/20'
+                                : 'bg-orange-500/20'
+                            }`}>
+                            <span className={`text-xl font-bold ${response.is_completed ? 'text-green-400' : 'text-orange-400'
+                                }`}>
+                                {response.email ? response.email[0].toUpperCase() : '?'}
+                            </span>
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-white">
+                                {response.email || 'Anonymous'}
+                            </h1>
+                            <p className="text-xs text-white/30 font-mono mt-1">{response.session_id}</p>
+                        </div>
+                    </div>
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${response.is_completed
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-orange-500/20 text-orange-400'
+                        }`}>
+                        {response.is_completed ? 'Complete' : 'In Progress'}
+                    </span>
                 </div>
-                <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${response.is_completed
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}>
-                    {response.is_completed ? 'Complete' : 'Partial'}
-                </span>
+
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <p className="text-white/40 text-xs mb-1">Started</p>
+                        <p className="text-white/80">
+                            {new Date(response.started_at).toLocaleDateString('en-US', {
+                                month: 'short', day: 'numeric', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                            })}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-white/40 text-xs mb-1">Current Step</p>
+                        <p className="text-white/80">{response.current_step || '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-white/40 text-xs mb-1">Email Opt-in</p>
+                        <p className="text-white/80">{response.email_opt_in ? 'Yes' : 'No'}</p>
+                    </div>
+                </div>
             </div>
 
-            {/* Form Data */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-                <h2 className="font-semibold mb-4">Survey Responses</h2>
-
-                <div className="space-y-4">
+            {/* Survey Responses */}
+            <div className="bg-[#16161d] border border-white/10 rounded-xl mb-5">
+                <div className="p-5 border-b border-white/10">
+                    <h2 className="font-semibold text-white">Survey Responses</h2>
+                </div>
+                <div className="p-5 space-y-5">
                     {formData.painCheck && (
                         <div>
-                            <p className="text-sm text-text-muted">Pain Check</p>
-                            <p className="font-medium">{formData.painCheck}</p>
+                            <p className="text-xs text-white/40 mb-1">Pain Check</p>
+                            <p className="text-white/80">{formData.painCheck}</p>
                         </div>
                     )}
 
                     {formData.issues?.length > 0 && (
                         <div>
-                            <p className="text-sm text-text-muted">Issues</p>
-                            <div className="flex flex-wrap gap-2 mt-1">
+                            <p className="text-xs text-white/40 mb-2">Issues</p>
+                            <div className="flex flex-wrap gap-2">
                                 {formData.issues.map((issue: string) => (
-                                    <span key={issue} className="px-2 py-1 bg-gray-100 rounded text-sm">
+                                    <span key={issue} className="px-2.5 py-1 bg-white/10 rounded text-sm text-white/70">
                                         {issue}
                                     </span>
                                 ))}
@@ -95,10 +135,10 @@ export default async function ResponseDetailPage({
 
                     {formData.benefits?.length > 0 && (
                         <div>
-                            <p className="text-sm text-text-muted">Desired Benefits</p>
-                            <div className="flex flex-wrap gap-2 mt-1">
+                            <p className="text-xs text-white/40 mb-2">Desired Benefits</p>
+                            <div className="flex flex-wrap gap-2">
                                 {formData.benefits.map((benefit: string) => (
-                                    <span key={benefit} className="px-2 py-1 bg-primary/10 text-primary rounded text-sm">
+                                    <span key={benefit} className="px-2.5 py-1 bg-blue-500/20 rounded text-sm text-blue-400">
                                         {benefit}
                                     </span>
                                 ))}
@@ -108,56 +148,55 @@ export default async function ResponseDetailPage({
 
                     {formData.kidAges && (
                         <div>
-                            <p className="text-sm text-text-muted">Children's Ages</p>
-                            <p className="font-medium">{formData.kidAges}</p>
+                            <p className="text-xs text-white/40 mb-1">Children&apos;s Ages</p>
+                            <p className="text-white/80">{formData.kidAges}</p>
                         </div>
                     )}
 
                     {formData.currentDevice && (
                         <div>
-                            <p className="text-sm text-text-muted">Current Device</p>
-                            <p className="font-medium">{formData.currentDevice}</p>
+                            <p className="text-xs text-white/40 mb-1">Current Device</p>
+                            <p className="text-white/80">{formData.currentDevice}</p>
                         </div>
                     )}
 
-                    {formData.clickMotivation && (
-                        <div>
-                            <p className="text-sm text-text-muted">Why They Clicked</p>
-                            <p className="font-medium">{formData.clickMotivation}</p>
-                        </div>
-                    )}
-
-                    {formData.anythingElse && (
-                        <div>
-                            <p className="text-sm text-text-muted">Additional Comments</p>
-                            <p className="font-medium">{formData.anythingElse}</p>
-                        </div>
+                    {Object.keys(formData).length === 0 && (
+                        <p className="text-white/40 text-center py-4">No form data yet</p>
                     )}
                 </div>
             </div>
 
             {/* Voice Recordings */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h2 className="font-semibold mb-4">Voice Recordings ({recordings.length})</h2>
+            <div className="bg-[#16161d] border border-white/10 rounded-xl">
+                <div className="p-5 border-b border-white/10">
+                    <h2 className="font-semibold text-white">
+                        Voice Recordings ({recordings.length})
+                    </h2>
+                </div>
 
                 {recordings.length === 0 ? (
-                    <p className="text-text-muted text-sm">No voice recordings</p>
+                    <div className="p-10 text-center">
+                        <p className="text-white/40">No recordings</p>
+                    </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="divide-y divide-white/5">
                         {recordings.map((recording: any) => (
-                            <div key={recording.id} className="border border-gray-200 rounded-lg p-4">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div>
-                                        <p className="font-medium">Step {recording.step_number}</p>
-                                        <p className="text-xs text-text-muted">
-                                            {new Date(recording.created_at).toLocaleString()}
-                                        </p>
+                            <div key={recording.id} className="p-5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                                            <span className="text-purple-400 font-medium text-sm">{recording.step_number}</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-medium text-sm">Step {recording.step_number}</p>
+                                            <p className="text-xs text-white/30">
+                                                {new Date(recording.created_at).toLocaleString()}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <span className={`px-2 py-0.5 rounded text-xs ${recording.processing_status === 'completed'
-                                            ? 'bg-green-100 text-green-700'
-                                            : recording.processing_status === 'processing'
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'bg-gray-100 text-gray-600'
+                                    <span className={`px-2 py-1 rounded text-xs ${recording.processing_status === 'completed'
+                                            ? 'bg-green-500/20 text-green-400'
+                                            : 'bg-white/10 text-white/40'
                                         }`}>
                                         {recording.processing_status}
                                     </span>
@@ -167,21 +206,21 @@ export default async function ResponseDetailPage({
                                     <audio
                                         src={recording.file_url}
                                         controls
-                                        className="w-full mb-3"
+                                        className="w-full h-10 mb-4"
                                     />
                                 )}
 
                                 {recording.transcript && (
-                                    <div className="bg-gray-50 rounded p-3 mb-3">
-                                        <p className="text-xs text-text-muted mb-1">Transcript</p>
-                                        <p className="text-sm">{recording.transcript}</p>
+                                    <div className="bg-white/5 rounded-lg p-4 mb-4">
+                                        <p className="text-xs text-white/40 mb-2">Transcript</p>
+                                        <p className="text-white/80 text-sm">{recording.transcript}</p>
                                     </div>
                                 )}
 
                                 {recording.extracted_data && (
-                                    <div className="bg-primary/5 rounded p-3">
-                                        <p className="text-xs text-primary mb-1">AI Extraction</p>
-                                        <pre className="text-sm overflow-auto">
+                                    <div className="bg-blue-500/10 rounded-lg p-4">
+                                        <p className="text-xs text-blue-400 mb-2">AI Extraction</p>
+                                        <pre className="text-sm text-white/70 overflow-auto">
                                             {JSON.stringify(recording.extracted_data, null, 2)}
                                         </pre>
                                     </div>

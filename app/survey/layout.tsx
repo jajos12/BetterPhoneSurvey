@@ -1,5 +1,4 @@
-import { ProgressBar } from '@/components/survey/ProgressBar';
-import { GlassCard } from '@/components/ui/GlassCard';
+import { SurveyProvider } from "@/components/providers/SurveyProvider";
 
 export default function SurveyLayout({
     children,
@@ -7,8 +6,20 @@ export default function SurveyLayout({
     children: React.ReactNode;
 }) {
     return (
-        <main className="min-h-screen flex flex-col p-4 max-w-2xl mx-auto">
-            {children}
-        </main>
+        <>
+            {/* Aurora Background */}
+            <div className="aurora-bg" aria-hidden="true">
+                <div className="aurora-orb aurora-orb-1" />
+                <div className="aurora-orb aurora-orb-2" />
+                <div className="aurora-orb aurora-orb-3" />
+            </div>
+
+            {/* Content */}
+            <SurveyProvider>
+                <main className="container-survey">
+                    {children}
+                </main>
+            </SurveyProvider>
+        </>
     );
 }

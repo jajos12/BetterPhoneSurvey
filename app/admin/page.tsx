@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { supabaseAdmin } from '@/lib/supabase-server';
 
-export const revalidate = 0; // Always fetch fresh data
+export const revalidate = 0;
 
 async function getStats() {
     try {
@@ -20,9 +20,9 @@ async function getStats() {
 
         const { data: recentResponses } = await supabaseAdmin
             .from('survey_responses')
-            .select('session_id, email, is_completed, started_at')
+            .select('session_id, email, is_completed, started_at, current_step')
             .order('started_at', { ascending: false })
-            .limit(5);
+            .limit(6);
 
         return {
             totalResponses: totalResponses || 0,
@@ -48,69 +48,122 @@ export default async function AdminPage() {
 
     return (
         <div>
-            <h1 className="text-2xl font-bold mb-8">Dashboard Overview</h1>
+            {/* Header */}
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-white mb-1">Dashboard</h1>
+                <p className="text-white/50 text-sm">Track survey performance and insights</p>
+            </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <p className="text-sm text-text-muted mb-1">Total Responses</p>
-                    <p className="text-3xl font-bold text-primary">{stats.totalResponses}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {/* Total Responses */}
+                <div className="bg-[#16161d] border border-white/10 rounded-xl p-5">
+                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
+                        <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <p className="text-3xl font-bold text-white">{stats.totalResponses}</p>
+                    <p className="text-sm text-white/40 mt-1">Total responses</p>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <p className="text-sm text-text-muted mb-1">Completed</p>
-                    <p className="text-3xl font-bold text-success">{stats.completedResponses}</p>
+                {/* Completed */}
+                <div className="bg-[#16161d] border border-white/10 rounded-xl p-5">
+                    <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
+                        <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <p className="text-3xl font-bold text-white">{stats.completedResponses}</p>
+                    <p className="text-sm text-white/40 mt-1">Completed</p>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <p className="text-sm text-text-muted mb-1">Completion Rate</p>
-                    <p className="text-3xl font-bold text-accent">{stats.completionRate}%</p>
+                {/* Completion Rate */}
+                <div className="bg-[#16161d] border border-white/10 rounded-xl p-5">
+                    <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center mb-4">
+                        <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                    </div>
+                    <p className="text-3xl font-bold text-white">{stats.completionRate}%</p>
+                    <p className="text-sm text-white/40 mt-1">Completion rate</p>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <p className="text-sm text-text-muted mb-1">Voice Recordings</p>
-                    <p className="text-3xl font-bold text-primary-light">{stats.voiceRecordings}</p>
+                {/* Voice Recordings */}
+                <div className="bg-[#16161d] border border-white/10 rounded-xl p-5">
+                    <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
+                        <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                    </div>
+                    <p className="text-3xl font-bold text-white">{stats.voiceRecordings}</p>
+                    <p className="text-sm text-white/40 mt-1">Voice recordings</p>
                 </div>
             </div>
 
             {/* Recent Responses */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <h2 className="font-semibold">Recent Responses</h2>
-                    <Link href="/admin/responses" className="text-sm text-primary hover:underline">
+            <div className="bg-[#16161d] border border-white/10 rounded-xl overflow-hidden">
+                <div className="p-5 border-b border-white/10 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-base font-semibold text-white">Recent Responses</h2>
+                        <p className="text-xs text-white/40 mt-0.5">Latest survey submissions</p>
+                    </div>
+                    <Link
+                        href="/admin/responses"
+                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                    >
                         View all →
                     </Link>
                 </div>
 
-                <div className="divide-y divide-gray-100">
-                    {stats.recentResponses.length === 0 ? (
-                        <p className="p-6 text-text-muted text-center">No responses yet</p>
-                    ) : (
-                        stats.recentResponses.map((response: any) => (
+                {stats.recentResponses.length === 0 ? (
+                    <div className="p-10 text-center">
+                        <p className="text-white/40">No responses yet</p>
+                    </div>
+                ) : (
+                    <div>
+                        {stats.recentResponses.map((response: any) => (
                             <Link
                                 key={response.session_id}
                                 href={`/admin/responses/${response.session_id}`}
-                                className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                                className="flex items-center justify-between p-4 border-b border-white/5 last:border-b-0 hover:bg-white/5 transition-colors"
                             >
-                                <div>
-                                    <p className="font-medium text-sm">
-                                        {response.email || 'Anonymous'}
-                                    </p>
-                                    <p className="text-xs text-text-muted">
-                                        {new Date(response.started_at).toLocaleDateString()} at{' '}
-                                        {new Date(response.started_at).toLocaleTimeString()}
-                                    </p>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-sm font-medium">
+                                            {response.email ? response.email[0].toUpperCase() : '?'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <p className="text-white text-sm font-medium">
+                                            {response.email || 'Anonymous'}
+                                        </p>
+                                        <p className="text-xs text-white/30">
+                                            {new Date(response.started_at).toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </p>
+                                    </div>
                                 </div>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${response.is_completed
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-amber-100 text-amber-700'
-                                    }`}>
-                                    {response.is_completed ? 'Complete' : 'Partial'}
-                                </span>
+
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-white/30">
+                                        Step {response.current_step || '?'}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${response.is_completed
+                                            ? 'bg-green-500/20 text-green-400'
+                                            : 'bg-orange-500/20 text-orange-400'
+                                        }`}>
+                                        {response.is_completed ? 'Complete' : 'In Progress'}
+                                    </span>
+                                </div>
                             </Link>
-                        ))
-                    )}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

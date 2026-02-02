@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Outfit } from "next/font/google";
 import "./globals.css";
-import { SurveyProvider } from "@/components/providers/SurveyProvider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -36,19 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${dmSans.variable} ${outfit.variable}`}>
       <body className="antialiased">
-        {/* Aurora Background */}
-        <div className="aurora-bg" aria-hidden="true">
-          <div className="aurora-orb aurora-orb-1" />
-          <div className="aurora-orb aurora-orb-2" />
-          <div className="aurora-orb aurora-orb-3" />
-        </div>
-
-        {/* Content */}
-        <SurveyProvider>
-          <main className="container-survey">
-            {children}
-          </main>
-        </SurveyProvider>
+        {children}
       </body>
     </html>
   );

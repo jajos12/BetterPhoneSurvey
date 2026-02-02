@@ -2,44 +2,24 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-    // Only protect /admin routes
-    if (request.nextUrl.pathname.startsWith('/admin')) {
-        const authHeader = request.headers.get('authorization');
+    const pathname = request.nextUrl.pathname;
+    const authCookie = request.cookies.get('admin_auth');
+    const isAuthenticated = authCookie?.value === 'authenticated';
 
-        if (!authHeader) {
-            return new NextResponse('Authentication required', {
-                status: 401,
-                headers: {
-                    'WWW-Authenticate': 'Basic realm="Admin Area"',
-                },
-            });
-        }
+    // Skip API routes
+    if (pathname.startsWith('/api/')) {
+        return NextResponse.next();
+    }
 
-        const [scheme, encoded] = authHeader.split(' ');
+    // If on login page and already authenticated, redirect to admin
+    if (pathname === '/login' && isAuthenticated) {
+        return NextResponse.redirect(new URL('/admin', request.url));
+    }
 
-        if (scheme !== 'Basic' || !encoded) {
-            return new NextResponse('Invalid authentication', {
-                status: 401,
-                headers: {
-                    'WWW-Authenticate': 'Basic realm="Admin Area"',
-                },
-            });
-        }
-
-        const decoded = atob(encoded);
-        const [username, password] = decoded.split(':');
-
-        // Check credentials against environment variables
-        const validUsername = process.env.ADMIN_USERNAME || 'admin';
-        const validPassword = process.env.ADMIN_PASSWORD || 'betterphone2024';
-
-        if (username !== validUsername || password !== validPassword) {
-            return new NextResponse('Invalid credentials', {
-                status: 401,
-                headers: {
-                    'WWW-Authenticate': 'Basic realm="Admin Area"',
-                },
-            });
+    // Protect /admin routes
+    if (pathname.startsWith('/admin')) {
+        if (!isAuthenticated) {
+            return NextResponse.redirect(new URL('/login', request.url));
         }
     }
 
@@ -47,5 +27,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: '/admin/:path*',
+    matcher: ['/admin/:path*', '/login'],
 };

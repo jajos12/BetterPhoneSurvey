@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "BetterPhone Survey | Help Us Understand Your Family",
   description: "Share your experience with screen time challenges. Your voice helps us build better solutions for families.",
   keywords: ["parenting", "screen time", "children", "digital wellness", "family tech"],
+  icons: {
+    icon: "/favicon.svg",
+  },
   openGraph: {
     title: "BetterPhone Parent Survey",
     description: "Your perspective matters. Help us understand the challenges families face with screen time.",

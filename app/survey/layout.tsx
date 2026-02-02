@@ -1,4 +1,5 @@
 import { SurveyProvider } from "@/components/providers/SurveyProvider";
+import { FloatingElements } from "@/components/ui/FloatingElements";
 
 export default function SurveyLayout({
     children,
@@ -7,12 +8,8 @@ export default function SurveyLayout({
 }) {
     return (
         <>
-            {/* Aurora Background */}
-            <div className="aurora-bg" aria-hidden="true">
-                <div className="aurora-orb aurora-orb-1" />
-                <div className="aurora-orb aurora-orb-2" />
-                <div className="aurora-orb aurora-orb-3" />
-            </div>
+            {/* Floating Background */}
+            <FloatingElements />
 
             {/* Content */}
             <SurveyProvider>

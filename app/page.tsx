@@ -1,36 +1,30 @@
 import Link from 'next/link';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { Button } from '@/components/ui/Button';
+import { FloatingElements } from '@/components/ui/FloatingElements';
 
 export default function HomePage() {
   return (
     <>
-      {/* Aurora Background */}
-      <div className="aurora-bg" aria-hidden="true">
-        <div className="aurora-orb aurora-orb-1" />
-        <div className="aurora-orb aurora-orb-2" />
-        <div className="aurora-orb aurora-orb-3" />
-      </div>
+      {/* Floating Background */}
+      <FloatingElements />
 
       <main className="min-h-screen flex items-center justify-center p-4 relative z-10">
-        <div className="max-w-2xl w-full">
-          <GlassCard className="animate-fade-in">
+        <div className="max-w-xl w-full">
+          <div className="glass-card glass-card-elevated p-8 md:p-10 animate-fade-in">
             <div className="text-center stagger-children">
               {/* Welcome badge */}
-              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-accent mb-4 bg-accent/10 px-4 py-2 rounded-full">
+              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary mb-6 bg-primary/10 px-4 py-2 rounded-full">
                 For Parents, By Parents
               </span>
 
               {/* Headline */}
-              <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-6 leading-tight">
+              <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-6 leading-tight font-[family-name:var(--font-display)]">
                 Help Us Build a Better Phone for Kids
               </h1>
 
               {/* Empathetic intro */}
               <p className="text-text-secondary text-lg mb-4 leading-relaxed">
                 We&apos;re a group of parents and child development researchers working
-                to create a phone that puts children&apos;s well-being first — one that
-                understands the real challenges you face every day.
+                to create a phone that puts children&apos;s well-being first.
               </p>
 
               <p className="text-text-secondary mb-8 leading-relaxed">
@@ -39,28 +33,32 @@ export default function HomePage() {
               </p>
 
               {/* Trust indicators */}
-              <div className="flex items-center justify-center gap-6 mb-8 text-sm text-text-muted">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🔒</span>
-                  <span>Private & Confidential</span>
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+                <div className="trust-badge">
+                  <span>🔒</span>
+                  <span>Anonymous</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">⏱️</span>
-                  <span>~10 minutes</span>
+                <div className="trust-badge">
+                  <span>⏱️</span>
+                  <span>~10 min</span>
+                </div>
+                <div className="trust-badge">
+                  <span>🔐</span>
+                  <span>Confidential</span>
                 </div>
               </div>
 
               {/* CTA */}
               <Link href="/survey/pain-check">
-                <Button size="lg">
+                <button className="btn-primary text-lg px-8 py-4">
                   Let&apos;s Begin
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
-                </Button>
+                </button>
               </Link>
             </div>
-          </GlassCard>
+          </div>
         </div>
       </main>
     </>

@@ -40,26 +40,10 @@ export function CheckboxGroup({ name, options, values, onChange, maxSelections }
                         />
                         <label
                             htmlFor={`${name}-${option.value}`}
-                            className={`
-                                flex items-center gap-4 p-4 rounded-2xl cursor-pointer
-                                transition-all duration-300 font-medium
-                                bg-white/70 border-2
-                                ${isChecked
-                                    ? 'border-accent bg-accent/10 shadow-md'
-                                    : 'border-transparent hover:border-primary/30 hover:bg-white/90'
-                                }
-                                peer-disabled:opacity-50 peer-disabled:cursor-not-allowed
-                            `}
+                            className={`checkbox-item ${isChecked ? 'checked' : ''} peer-disabled:opacity-50`}
                         >
                             {/* Custom checkbox */}
-                            <span className={`
-                                w-6 h-6 rounded-lg flex-shrink-0
-                                transition-all duration-300 flex items-center justify-center
-                                ${isChecked
-                                    ? 'bg-gradient-to-br from-accent to-accent-light shadow-sm'
-                                    : 'border-2 border-text-muted/40 bg-white'
-                                }
-                            `}>
+                            <span className={`checkbox-box ${isChecked ? 'checked' : ''}`}>
                                 {isChecked && (
                                     <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

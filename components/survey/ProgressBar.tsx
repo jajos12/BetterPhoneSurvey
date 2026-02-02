@@ -27,22 +27,11 @@ export function ProgressBar({ currentStepId }: ProgressBarProps) {
     return (
         <div className="glass-card !p-4 !rounded-2xl mb-6 animate-fade-in">
             {/* Progress track */}
-            <div className="h-2 bg-primary/10 rounded-full overflow-hidden">
+            <div className="progress-track">
                 <div
-                    className="h-full rounded-full transition-all duration-700 ease-out relative"
-                    style={{
-                        width: `${Math.max(progress, 5)}%`,
-                        background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%)',
-                    }}
-                >
-                    {/* Glowing tip */}
-                    <div
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-accent-light"
-                        style={{
-                            boxShadow: '0 0 12px var(--accent-glow), 0 0 4px var(--accent)',
-                        }}
-                    />
-                </div>
+                    className="progress-fill"
+                    style={{ width: `${Math.max(progress, 5)}%` }}
+                />
             </div>
 
             {/* Status text */}
@@ -50,16 +39,16 @@ export function ProgressBar({ currentStepId }: ProgressBarProps) {
                 {getStatusMessage()}
             </p>
 
-            {/* Step indicators for visual progress */}
+            {/* Step indicators */}
             <div className="flex justify-between mt-3 px-1">
                 {[...Array(10)].map((_, i) => (
                     <div
                         key={i}
                         className={`w-2 h-2 rounded-full transition-all duration-300 ${i < currentIndex
-                                ? 'bg-accent scale-100'
+                                ? 'bg-primary scale-100'
                                 : i === currentIndex - 1
-                                    ? 'bg-accent-light scale-125'
-                                    : 'bg-primary/20 scale-75'
+                                    ? 'bg-primary-light scale-125'
+                                    : 'bg-text-light scale-75'
                             }`}
                     />
                 ))}

@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/survey/ProgressBar';
-import { StepNavigation } from '@/components/survey/StepNavigation';
-import { VoiceRecorder } from '@/components/survey/VoiceRecorder';
+import { VoiceTextInput } from '@/components/survey/VoiceTextInput';
 import { CheckboxGroup } from '@/components/ui/CheckboxGroup';
+import { DraggableRanking } from '@/components/survey/DraggableRanking';
+import { SkipButton } from '@/components/survey/SkipButton';
 import { useSurvey } from '@/components/providers/SurveyProvider';
 import { STEPS, ISSUES_OPTIONS, BENEFITS_OPTIONS, getNextStep, getPrevStep } from '@/config/steps';
 import { trackStepView, trackStepComplete, trackHesitation } from '@/lib/analytics';
@@ -24,7 +25,7 @@ function Step1Content() {
                 to just brain dump everything you feel. We are here to listen without judgment.
             </p>
 
-            <VoiceRecorder sessionId={sessionId} stepNumber={1} />
+            <VoiceTextInput sessionId={sessionId} stepNumber={1} placeholder="Share what's been challenging..." />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Talk about how it feels, specific moments, what&apos;s happening day-to-day.
@@ -60,36 +61,37 @@ function Step2Content() {
 }
 
 function Step3Content() {
-    const { formData } = useSurvey();
+    const { formData, updateFormData } = useSurvey();
     const selectedIssues = formData.issues || [];
+    const rankedIssues = formData.ranking || selectedIssues;
+
+    // Get items with labels
+    const rankingItems = selectedIssues.map(issue => {
+        const option = ISSUES_OPTIONS.find(o => o.value === issue);
+        return { value: issue, label: option?.label || issue };
+    });
+
+    const handleRankingChange = (newOrder: string[]) => {
+        updateFormData({ ranking: newOrder });
+    };
 
     return (
         <>
             <p className="text-text-secondary mb-6">
-                Drag to reorder these from most painful (top) to least painful (bottom):
+                Drag items to reorder from <span className="text-text-primary font-semibold">most painful</span> (1) to <span className="text-text-primary font-semibold">least painful</span> (bottom):
             </p>
 
-            <div className="space-y-2">
-                {selectedIssues.map((issue, index) => {
-                    const option = ISSUES_OPTIONS.find(o => o.value === issue);
-                    return (
-                        <div
-                            key={issue}
-                            className="flex items-center gap-3 p-4 bg-white/60 border-2 border-gray-200 rounded-xl cursor-grab hover:border-primary-light transition-all"
-                        >
-                            <span className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                                {index + 1}
-                            </span>
-                            <span>{option?.label || issue}</span>
-                        </div>
-                    );
-                })}
-                {selectedIssues.length === 0 && (
-                    <p className="text-text-muted text-center py-8">
-                        No issues selected. Go back to Step 2 to select issues.
-                    </p>
-                )}
-            </div>
+            {selectedIssues.length > 0 ? (
+                <DraggableRanking
+                    items={rankingItems}
+                    value={rankedIssues}
+                    onChange={handleRankingChange}
+                />
+            ) : (
+                <p className="text-text-muted text-center py-8">
+                    No issues selected. Go back to Step 2 to select issues.
+                </p>
+            )}
         </>
     );
 }
@@ -104,7 +106,7 @@ function Step4Content() {
                 Also, how urgent would you say solving these problems is for you?
             </p>
 
-            <VoiceRecorder sessionId={sessionId} stepNumber={4} />
+            <VoiceTextInput sessionId={sessionId} stepNumber={4} placeholder="Tell us about urgency and why..." />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Consider: On a scale of 1-10, how urgent is solving this? What happens if
@@ -124,7 +126,7 @@ function Step5Content() {
                 spent trying to fix this.
             </p>
 
-            <VoiceRecorder sessionId={sessionId} stepNumber={5} />
+            <VoiceTextInput sessionId={sessionId} stepNumber={5} placeholder="Share what you've tried..." />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Any apps, rules, taking the phone away, other devices — whatever you&apos;ve tried.
@@ -142,7 +144,7 @@ function Step6Content() {
                 If you switched your kid to a different phone, what would happen?
             </p>
 
-            <VoiceRecorder sessionId={sessionId} stepNumber={6} />
+            <VoiceTextInput sessionId={sessionId} stepNumber={6} placeholder="Tell us about potential reactions..." />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Consider: How would they react? What pushback would you get? What would make
@@ -397,11 +399,13 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                 </div>
 
                 {/* Navigation */}
-                <div className="flex gap-4 mt-auto pt-8">
+                <div className="flex items-center gap-4 mt-auto pt-8">
                     <Button variant="secondary" onClick={handleBack}>
                         Back
                     </Button>
-                    <div className="flex-1" />
+                    <div className="flex-1 text-right">
+                        <SkipButton onClick={handleNext} />
+                    </div>
                     <Button onClick={handleNext}>
                         {step === '10' ? 'Almost Done' : 'Continue'}
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

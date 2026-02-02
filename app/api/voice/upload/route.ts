@@ -15,14 +15,24 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Get file extension from original filename or default to webm
+        const originalName = file.name || 'recording.webm';
+        const ext = originalName.split('.').pop() || 'webm';
+
+        // Get file contents as ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        console.log('Uploading file:', originalName, 'size:', buffer.length, 'bytes');
+
         // Generate unique filename
-        const fileName = `${sessionId}/step-${stepNumber}-${Date.now()}.webm`;
+        const fileName = `${sessionId}/step-${stepNumber}-${Date.now()}.${ext}`;
 
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
             .from('voice-recordings')
-            .upload(fileName, file, {
-                contentType: 'audio/webm',
+            .upload(fileName, buffer, {
+                contentType: file.type || 'audio/webm',
                 upsert: true,
             });
 

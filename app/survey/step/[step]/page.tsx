@@ -3,6 +3,7 @@
 import { use, useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/survey/ProgressBar';
 import { StepNavigation } from '@/components/survey/StepNavigation';
 import { VoiceRecorder } from '@/components/survey/VoiceRecorder';
@@ -13,12 +14,7 @@ import { trackStepView, trackStepComplete, trackHesitation } from '@/lib/analyti
 
 // Step content components
 function Step1Content() {
-    const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
-
-    const handleRecordingComplete = (blob: Blob, duration: number) => {
-        setRecordingBlob(blob);
-        console.log('Recording complete:', duration, 'seconds');
-    };
+    const { sessionId } = useSurvey();
 
     return (
         <>
@@ -28,7 +24,7 @@ function Step1Content() {
                 to just brain dump everything you feel. We are here to listen without judgment.
             </p>
 
-            <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+            <VoiceRecorder sessionId={sessionId} stepNumber={1} />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Talk about how it feels, specific moments, what&apos;s happening day-to-day.
@@ -99,7 +95,7 @@ function Step3Content() {
 }
 
 function Step4Content() {
-    const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+    const { sessionId } = useSurvey();
 
     return (
         <>
@@ -108,7 +104,7 @@ function Step4Content() {
                 Also, how urgent would you say solving these problems is for you?
             </p>
 
-            <VoiceRecorder onRecordingComplete={(blob) => setRecordingBlob(blob)} />
+            <VoiceRecorder sessionId={sessionId} stepNumber={4} />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Consider: On a scale of 1-10, how urgent is solving this? What happens if
@@ -119,7 +115,7 @@ function Step4Content() {
 }
 
 function Step5Content() {
-    const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+    const { sessionId } = useSurvey();
 
     return (
         <>
@@ -128,7 +124,7 @@ function Step5Content() {
                 spent trying to fix this.
             </p>
 
-            <VoiceRecorder onRecordingComplete={(blob) => setRecordingBlob(blob)} />
+            <VoiceRecorder sessionId={sessionId} stepNumber={5} />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Any apps, rules, taking the phone away, other devices — whatever you&apos;ve tried.
@@ -138,7 +134,7 @@ function Step5Content() {
 }
 
 function Step6Content() {
-    const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+    const { sessionId } = useSurvey();
 
     return (
         <>
@@ -146,7 +142,7 @@ function Step6Content() {
                 If you switched your kid to a different phone, what would happen?
             </p>
 
-            <VoiceRecorder onRecordingComplete={(blob) => setRecordingBlob(blob)} />
+            <VoiceRecorder sessionId={sessionId} stepNumber={6} />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Consider: How would they react? What pushback would you get? What would make
@@ -294,21 +290,33 @@ const STEP_CONTENT: Record<string, () => React.ReactNode> = {
 export default function StepPage({ params }: { params: Promise<{ step: string }> }) {
     const { step } = use(params);
     const router = useRouter();
+    const { sessionId, formData } = useSurvey();
     const stepStartTime = useRef<number>(Date.now());
     const firstInteractionTime = useRef<number | null>(null);
 
     const stepConfig = STEPS.find(s => s.id === step);
     const StepContent = STEP_CONTENT[step];
 
-    // Track step view on mount
+    // Track step view and update DB
     useEffect(() => {
         stepStartTime.current = Date.now();
         firstInteractionTime.current = null;
 
-        if (stepConfig) {
+        if (stepConfig && sessionId) {
             trackStepView(step, stepConfig.title);
+
+            // Update current_step in DB immediately
+            fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId,
+                    currentStep: step,
+                    updatedAt: new Date().toISOString()
+                }),
+            }).catch(err => console.error('Failed to update step:', err));
         }
-    }, [step, stepConfig]);
+    }, [step, stepConfig, sessionId]);
 
     // Track first interaction (hesitation)
     const handleFirstInteraction = useCallback(() => {
@@ -328,11 +336,32 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         );
     }
 
-    const handleNext = () => {
+    const handleNext = async () => {
         const timeSpentMs = Date.now() - stepStartTime.current;
         trackStepComplete(step, timeSpentMs);
 
         const next = getNextStep(step);
+
+        // Save form data and update to next step
+        if (sessionId) {
+            try {
+                await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId,
+                        ...formData,
+                        currentStep: next?.id || step,
+                        isCompleted: step === '10', // Mark completed on last step
+                    }),
+                });
+            } catch (err) {
+                console.error('Failed to save progress:', err);
+                // Continue navigation even if save fails? 
+                // Prefer to continue so user isn't stuck.
+            }
+        }
+
         if (next) {
             router.push(next.path);
         }
@@ -350,33 +379,35 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
             <ProgressBar currentStepId={step} />
 
             <GlassCard className="flex-1 flex flex-col animate-fade-in">
-                <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-2">
-                    Step {step} of 10
-                </span>
+                <div className="stagger-children">
+                    {/* Step indicator */}
+                    <span className="inline-block text-xs font-semibold uppercase tracking-widest text-accent mb-3">
+                        Step {step} of 10
+                    </span>
 
-                <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-4">
-                    {stepConfig.title}
-                </h1>
+                    {/* Title */}
+                    <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-6 leading-tight">
+                        {stepConfig.title}
+                    </h1>
 
-                <StepContent />
+                    {/* Content */}
+                    <div className="mb-8">
+                        <StepContent />
+                    </div>
+                </div>
 
+                {/* Navigation */}
                 <div className="flex gap-4 mt-auto pt-8">
-                    <button
-                        onClick={handleBack}
-                        className="px-6 py-3 rounded-xl font-semibold border-2 border-gray-200 text-text-secondary hover:border-gray-400 hover:text-text-primary transition-all"
-                    >
+                    <Button variant="secondary" onClick={handleBack}>
                         Back
-                    </button>
+                    </Button>
                     <div className="flex-1" />
-                    <button
-                        onClick={handleNext}
-                        className="btn-primary px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2"
-                    >
+                    <Button onClick={handleNext}>
                         {step === '10' ? 'Almost Done' : 'Continue'}
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
-                    </button>
+                    </Button>
                 </div>
             </GlassCard>
         </>

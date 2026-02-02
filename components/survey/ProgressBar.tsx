@@ -10,28 +10,60 @@ export function ProgressBar({ currentStepId }: ProgressBarProps) {
     const progress = getProgress(currentStepId);
     const currentIndex = STEPS.findIndex(s => s.id === currentStepId);
 
-    let statusText = 'Getting started...';
-    if (currentStepId === 'pain-check') {
-        statusText = 'Quick check';
-    } else if (currentStepId === 'email') {
-        statusText = 'Almost done!';
-    } else if (currentStepId === 'thank-you') {
-        statusText = 'Complete!';
-    } else if (currentIndex > 0 && currentIndex <= 10) {
-        statusText = `Step ${currentStepId} of 10`;
-    }
+    // Warm, encouraging status messages
+    const getStatusMessage = () => {
+        if (currentStepId === 'pain-check') return 'Just a quick check...';
+        if (currentStepId === 'email') return 'One last thing...';
+        if (currentStepId === 'thank-you') return '✨ Thank you!';
+        if (currentIndex > 0 && currentIndex <= 10) {
+            const remaining = 10 - currentIndex;
+            if (remaining <= 2) return `Almost there! Step ${currentStepId} of 10`;
+            if (remaining <= 5) return `Halfway through! Step ${currentStepId} of 10`;
+            return `Step ${currentStepId} of 10`;
+        }
+        return 'Your journey begins...';
+    };
 
     return (
-        <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg p-4 rounded-2xl shadow-md mb-6">
-            <div className="h-2 bg-primary/15 rounded-full overflow-hidden">
+        <div className="glass-card !p-4 !rounded-2xl mb-6 animate-fade-in">
+            {/* Progress track */}
+            <div className="h-2 bg-primary/10 rounded-full overflow-hidden">
                 <div
-                    className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-500"
-                    style={{ width: `${progress}%` }}
-                />
+                    className="h-full rounded-full transition-all duration-700 ease-out relative"
+                    style={{
+                        width: `${Math.max(progress, 5)}%`,
+                        background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%)',
+                    }}
+                >
+                    {/* Glowing tip */}
+                    <div
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-accent-light"
+                        style={{
+                            boxShadow: '0 0 12px var(--accent-glow), 0 0 4px var(--accent)',
+                        }}
+                    />
+                </div>
             </div>
-            <p className="text-center text-sm text-text-secondary mt-2">
-                {statusText}
+
+            {/* Status text */}
+            <p className="text-center text-sm text-text-secondary mt-3 font-medium">
+                {getStatusMessage()}
             </p>
+
+            {/* Step indicators for visual progress */}
+            <div className="flex justify-between mt-3 px-1">
+                {[...Array(10)].map((_, i) => (
+                    <div
+                        key={i}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${i < currentIndex
+                                ? 'bg-accent scale-100'
+                                : i === currentIndex - 1
+                                    ? 'bg-accent-light scale-125'
+                                    : 'bg-primary/20 scale-75'
+                            }`}
+                    />
+                ))}
+            </div>
         </div>
     );
 }

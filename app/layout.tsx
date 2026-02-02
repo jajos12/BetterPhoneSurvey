@@ -1,13 +1,31 @@
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { SurveyProvider } from '@/components/providers/SurveyProvider';
-import { AnalyticsProvider } from '@/components/providers/AnalyticsProvider';
+import type { Metadata } from "next";
+import { DM_Sans, Outfit } from "next/font/google";
+import "./globals.css";
+import { SurveyProvider } from "@/components/providers/SurveyProvider";
 
-const inter = Inter({ subsets: ['latin'] });
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
 
-export const metadata = {
-  title: 'BetterPhone Parent Survey | Help Us Build a Better Phone for Kids',
-  description: 'Help us build a better phone for kids. Share your experiences as a parent dealing with children\'s technology use.',
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+export const metadata: Metadata = {
+  title: "BetterPhone Survey | Help Us Understand Your Family",
+  description: "Share your experience with screen time challenges. Your voice helps us build better solutions for families.",
+  keywords: ["parenting", "screen time", "children", "digital wellness", "family tech"],
+  openGraph: {
+    title: "BetterPhone Parent Survey",
+    description: "Your perspective matters. Help us understand the challenges families face with screen time.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -16,15 +34,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <AnalyticsProvider>
-          <SurveyProvider>
+    <html lang="en" className={`${dmSans.variable} ${outfit.variable}`}>
+      <body className="antialiased">
+        {/* Aurora Background */}
+        <div className="aurora-bg" aria-hidden="true">
+          <div className="aurora-orb aurora-orb-1" />
+          <div className="aurora-orb aurora-orb-2" />
+          <div className="aurora-orb aurora-orb-3" />
+        </div>
+
+        {/* Content */}
+        <SurveyProvider>
+          <main className="container-survey">
             {children}
-          </SurveyProvider>
-        </AnalyticsProvider>
+          </main>
+        </SurveyProvider>
       </body>
     </html>
   );
 }
-

@@ -7,26 +7,42 @@ export default function HomePage() {
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         <GlassCard className="animate-fade-in">
-          <div className="text-center">
-            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary mb-4">
-              Welcome
+          <div className="text-center stagger-children">
+            {/* Welcome badge */}
+            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-accent mb-4 bg-accent/10 px-4 py-2 rounded-full">
+              For Parents, By Parents
             </span>
 
+            {/* Headline */}
             <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-6 leading-tight">
               Help Us Build a Better Phone for Kids
             </h1>
 
+            {/* Empathetic intro */}
             <p className="text-text-secondary text-lg mb-4 leading-relaxed">
-              We&apos;re a group of parents and child development researchers working to create
-              a phone that puts children&apos;s development and well-being first — one that
-              thoughtfully accounts for technology&apos;s real impact on children&apos;s minds.
+              We&apos;re a group of parents and child development researchers working
+              to create a phone that puts children&apos;s well-being first — one that
+              understands the real challenges you face every day.
             </p>
 
             <p className="text-text-secondary mb-8 leading-relaxed">
-              Please take a few minutes to share your experiences so we can build something
-              that truly serves families.
+              Your voice matters. Share your experiences openly, and together,
+              we&apos;ll build something that truly serves families like yours.
             </p>
 
+            {/* Trust indicators */}
+            <div className="flex items-center justify-center gap-6 mb-8 text-sm text-text-muted">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🔒</span>
+                <span>Private & Confidential</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">⏱️</span>
+                <span>~10 minutes</span>
+              </div>
+            </div>
+
+            {/* CTA */}
             <Link href="/survey/pain-check">
               <Button size="lg">
                 Let&apos;s Begin

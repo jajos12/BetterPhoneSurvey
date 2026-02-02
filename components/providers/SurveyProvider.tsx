@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import type { SurveyFormData, SurveyContextType } from '@/types/survey';
 import { getSessionId } from '@/lib/utils';
 
@@ -13,6 +13,7 @@ export function SurveyProvider({ children }: { children: ReactNode }) {
     const [formData, setFormData] = useState<Partial<SurveyFormData>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const sessionCreatedRef = useRef(false);
 
     // Load session and form data on mount
     useEffect(() => {
@@ -30,6 +31,35 @@ export function SurveyProvider({ children }: { children: ReactNode }) {
         }
         setIsLoading(false);
     }, []);
+
+    // Create survey_response record in Supabase on session init
+    // This ensures the record exists before any voice recordings are uploaded
+    useEffect(() => {
+        if (!sessionId || sessionCreatedRef.current) return;
+
+        const createSession = async () => {
+            try {
+                const response = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId,
+                        currentStep: 'intro',
+                        isCompleted: false,
+                    }),
+                });
+
+                if (response.ok) {
+                    sessionCreatedRef.current = true;
+                    console.log('Session created:', sessionId);
+                }
+            } catch (err) {
+                console.error('Failed to create session:', err);
+            }
+        };
+
+        createSession();
+    }, [sessionId]);
 
     // Save to localStorage whenever formData changes
     useEffect(() => {
@@ -56,3 +86,4 @@ export function useSurvey() {
     }
     return context;
 }
+

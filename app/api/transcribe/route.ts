@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
+import OpenAI from 'openai';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(request: NextRequest) {
+    let tempFilePath: string | null = null;
+
     try {
         const { recordingId } = await request.json();
 
@@ -32,35 +42,46 @@ export async function POST(request: NextRequest) {
             .update({ processing_status: 'processing' })
             .eq('id', recordingId);
 
-        // Download audio file
-        const audioResponse = await fetch(recording.file_url);
-        const audioBlob = await audioResponse.blob();
+        // Detect path from URL
+        // Expected format: .../voice-recordings/sessionId/step-X-timestamp.webm
+        const urlParts = recording.file_url.split('/voice-recordings/');
+        if (urlParts.length < 2) {
+            throw new Error('Invalid file URL format');
+        }
+        const storagePath = urlParts[1];
 
-        // Call OpenAI Whisper API
-        const openaiKey = process.env.OPENAI_API_KEY;
-        if (!openaiKey) {
-            throw new Error('OPENAI_API_KEY not configured');
+        console.log('Downloading from storage path:', storagePath);
+
+        // Download audio file using authenticated admin client
+        const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+            .from('voice-recordings')
+            .download(storagePath);
+
+        if (downloadError || !fileData) {
+            console.error('Download error:', downloadError);
+            throw new Error('Failed to download file from Supabase');
         }
 
-        const formData = new FormData();
-        formData.append('file', audioBlob, 'audio.webm');
-        formData.append('model', 'whisper-1');
-        formData.append('language', 'en');
+        const audioBuffer = Buffer.from(await fileData.arrayBuffer());
 
-        const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${openaiKey}`,
-            },
-            body: formData,
+        // Detect file extension from path
+        const fileExt = storagePath.split('.').pop() || 'webm';
+
+        // Save to temp file
+        tempFilePath = path.join(os.tmpdir(), `recording_${recordingId}.${fileExt}`);
+        fs.writeFileSync(tempFilePath, audioBuffer);
+
+        console.log('Saved temp file:', tempFilePath, 'size:', audioBuffer.length);
+
+        // Use OpenAI SDK with file stream
+        const transcription = await openai.audio.transcriptions.create({
+            file: fs.createReadStream(tempFilePath),
+            model: 'whisper-1',
+            language: 'en',
         });
 
-        if (!whisperResponse.ok) {
-            const error = await whisperResponse.text();
-            throw new Error(`Whisper API error: ${error}`);
-        }
-
-        const { text: transcript } = await whisperResponse.json();
+        const transcript = transcription.text;
+        console.log('Transcription successful:', transcript.substring(0, 100));
 
         // Save transcript to database
         const { error: updateError } = await supabaseAdmin
@@ -87,5 +108,10 @@ export async function POST(request: NextRequest) {
             { error: 'Transcription failed' },
             { status: 500 }
         );
+    } finally {
+        // Clean up temp file
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
     }
 }

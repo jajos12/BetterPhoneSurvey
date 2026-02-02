@@ -161,24 +161,24 @@ export function VoiceRecorder({
                 </div>
             )}
 
-            {/* Idle State - "We're here to listen" */}
+            {/* Idle State - One Big Clickable Button */}
             {state === 'idle' && (
-                <div className="stagger-children">
-                    <div className="mb-6">
-                        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center shadow-lg relative">
+                <div className="stagger-children text-center">
+                    <button
+                        onClick={startRecording}
+                        className="group w-full flex flex-col items-center gap-4 p-6 rounded-2xl bg-white/50 border-2 border-dashed border-primary/30 hover:border-primary hover:bg-white/80 transition-all cursor-pointer"
+                    >
+                        <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                             <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
                                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
                             </svg>
                         </div>
-                    </div>
-                    <p className="text-text-secondary mb-6 text-lg">
-                        Take your time. We&apos;re here to listen.
-                    </p>
-                    <Button onClick={startRecording} size="lg">
-                        <span className="text-xl">🎙️</span>
-                        Start Recording
-                    </Button>
+                        <div>
+                            <p className="text-text-primary font-semibold text-lg">Tap to Start Recording</p>
+                            <p className="text-text-muted text-sm mt-1">We&apos;re here to listen</p>
+                        </div>
+                    </button>
                 </div>
             )}
 

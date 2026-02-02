@@ -13,10 +13,19 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
     const [dragOver, setDragOver] = useState<number | null>(null);
     const dragNode = useRef<HTMLDivElement | null>(null);
 
-    // Create ordered list from value, falling back to items order
-    const orderedItems = value.length > 0
-        ? value.map(v => items.find(i => i.value === v)).filter(Boolean) as { value: string; label: string }[]
-        : items;
+    // Create ordered list: prioritize saved order, but include ALL items
+    // Items in value come first (in saved order), then any new items not in value
+    const orderedItems = (() => {
+        // Start with items that are in the saved value (in their saved order)
+        const fromValue = value
+            .map(v => items.find(i => i.value === v))
+            .filter(Boolean) as { value: string; label: string }[];
+
+        // Add any items that weren't in the saved value
+        const remainingItems = items.filter(i => !value.includes(i.value));
+
+        return [...fromValue, ...remainingItems];
+    })();
 
     const handleDragStart = (e: React.DragEvent, item: string) => {
         setDragging(item);

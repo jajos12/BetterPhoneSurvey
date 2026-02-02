@@ -2,23 +2,31 @@
 
 import { useState } from 'react';
 import { VoiceRecorder } from './VoiceRecorder';
+import { useSurvey } from '@/components/providers/SurveyProvider';
 
 interface VoiceTextInputProps {
     sessionId: string;
     stepNumber: number;
-    onTextChange?: (text: string) => void;
-    textValue?: string;
     placeholder?: string;
 }
 
 export function VoiceTextInput({
     sessionId,
     stepNumber,
-    onTextChange,
-    textValue = '',
     placeholder = 'Type your response here...'
 }: VoiceTextInputProps) {
     const [mode, setMode] = useState<'voice' | 'text'>('voice');
+    const [localText, setLocalText] = useState('');
+    const { updateFormData, formData } = useSurvey();
+
+    // Field key based on step number
+    const fieldKey = `step${stepNumber}Text` as keyof typeof formData;
+
+    const handleTextChange = (text: string) => {
+        setLocalText(text);
+        // Save to form data
+        updateFormData({ [fieldKey]: text });
+    };
 
     return (
         <div className="space-y-4">
@@ -50,14 +58,14 @@ export function VoiceTextInput({
             {mode === 'voice' ? (
                 <VoiceRecorder sessionId={sessionId} stepNumber={stepNumber} />
             ) : (
-                <div className="recorder-container">
+                <div className="space-y-3">
                     <textarea
-                        className="input-base textarea-input"
+                        className="w-full min-h-[150px] p-4 rounded-xl border-2 border-gray-200 bg-white text-gray-900 placeholder-gray-400 resize-y focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                         placeholder={placeholder}
-                        value={textValue}
-                        onChange={(e) => onTextChange?.(e.target.value)}
+                        value={localText}
+                        onChange={(e) => handleTextChange(e.target.value)}
                     />
-                    <p className="text-sm text-text-muted mt-3">
+                    <p className="text-sm text-text-muted">
                         Take your time to share your thoughts
                     </p>
                 </div>

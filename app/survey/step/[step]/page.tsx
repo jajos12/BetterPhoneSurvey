@@ -338,6 +338,37 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         );
     }
 
+    // Check if step has required data filled
+    const isStepValid = (): boolean => {
+        // Type-safe access using Record
+        const data = formData as Record<string, unknown>;
+
+        switch (step) {
+            case '1': // Voice/text input
+                return !!(data.step1Text);
+            case '2': // Checkbox selection
+                return (formData.issues?.length || 0) > 0;
+            case '3': // Ranking - always valid if issues exist
+                return (formData.issues?.length || 0) > 0;
+            case '4': // Voice/text input
+                return !!(data.step4Text);
+            case '5': // Voice/text input
+                return !!(data.step5Text);
+            case '6': // Checkbox selection
+                return (formData.benefits?.length || 0) > 0;
+            case '7': // Voice/text input
+                return !!(data.step7Text);
+            case '8': // Voice/text input
+                return !!(data.step8Text);
+            case '9': // Voice/text input
+                return !!(data.step9Text);
+            case '10': // Voice/text input
+                return !!(data.step10Text);
+            default:
+                return true;
+        }
+    };
+
     const handleNext = async () => {
         const timeSpentMs = Date.now() - stepStartTime.current;
         trackStepComplete(step, timeSpentMs);
@@ -376,6 +407,8 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         }
     };
 
+    const stepIsValid = isStepValid();
+
     return (
         <>
             <ProgressBar currentStepId={step} />
@@ -399,19 +432,35 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                 </div>
 
                 {/* Navigation */}
-                <div className="flex items-center gap-4 mt-auto pt-8">
-                    <Button variant="secondary" onClick={handleBack}>
-                        Back
-                    </Button>
-                    <div className="flex-1 text-right">
-                        <SkipButton onClick={handleNext} />
+                <div className="mt-auto pt-8 space-y-4">
+                    {/* Main buttons - stack on mobile, row on desktop */}
+                    <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3">
+                        <Button variant="secondary" onClick={handleBack} className="w-full sm:w-auto">
+                            Back
+                        </Button>
+
+                        <div className="flex-1 flex justify-center sm:justify-end">
+                            <SkipButton onClick={handleNext} />
+                        </div>
+
+                        <Button
+                            onClick={handleNext}
+                            disabled={!stepIsValid}
+                            className={`w-full sm:w-auto ${!stepIsValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            {step === '10' ? 'Almost Done' : 'Continue'}
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </Button>
                     </div>
-                    <Button onClick={handleNext}>
-                        {step === '10' ? 'Almost Done' : 'Continue'}
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </Button>
+
+                    {/* Hint when Continue is disabled */}
+                    {!stepIsValid && (
+                        <p className="text-center text-sm text-text-muted">
+                            Please provide a response to continue, or skip this question
+                        </p>
+                    )}
                 </div>
             </GlassCard>
         </>

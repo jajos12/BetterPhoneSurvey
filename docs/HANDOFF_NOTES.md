@@ -94,6 +94,7 @@ The user requested converting a markdown survey document into an interactive web
 ### Priority 1: Voice Recording Integration
 - Replace placeholder boxes with actual audio recording
 - Consider: SpeakPipe, native MediaRecorder API, addpipe.com, or other third-party service
+- I highly recommend using [addpipe](https://dashboard.addpipe.com/embed) as it seems to be very developer friendly and usable. it can save a bunch of hours of coding and make the voice memo part automatically finished without needing an iterative process to solve any bugs or issues with it.
 - Steps affected: 1, 4, 5, 6
 
 ### Priority 2: Form Submission Backend

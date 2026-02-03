@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { VoiceRecorder } from './VoiceRecorder';
 import { useSurvey } from '@/components/providers/SurveyProvider';
 
@@ -16,15 +16,27 @@ export function VoiceTextInput({
     placeholder = 'Type your response here...'
 }: VoiceTextInputProps) {
     const [mode, setMode] = useState<'voice' | 'text'>('voice');
-    const [localText, setLocalText] = useState('');
     const { updateFormData, formData } = useSurvey();
 
     // Field key based on step number
-    const fieldKey = `step${stepNumber}Text` as keyof typeof formData;
+    const fieldKey = `step${stepNumber}Text`;
+
+    // Initialize from formData
+    const data = formData as Record<string, unknown>;
+    const savedText = (data[fieldKey] as string) || '';
+    const [localText, setLocalText] = useState(savedText);
+
+    // Sync local state with formData when it changes
+    useEffect(() => {
+        const newSavedText = (data[fieldKey] as string) || '';
+        if (newSavedText && newSavedText !== localText) {
+            setLocalText(newSavedText);
+        }
+    }, [data, fieldKey, localText]);
 
     const handleTextChange = (text: string) => {
         setLocalText(text);
-        // Save to form data
+        // Save to form data immediately
         updateFormData({ [fieldKey]: text });
     };
 

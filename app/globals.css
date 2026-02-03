@@ -1104,52 +1104,81 @@ textarea:focus {
    ======================================== */
 
 @media (max-width: 640px) {
-
-  /* Make touch targets larger on mobile */
-  .btn-primary,
-  .btn-secondary {
-    min-height: 48px;
-    padding: 0.875rem 1.5rem;
-    font-size: 1rem;
+  /* Base body adjustments for mobile */
+  body {
+    font-size: 16px; /* Prevent zoom on iOS */
+    -webkit-text-size-adjust: 100%;
   }
 
-  /* Larger checkboxes */
+  /* Safe area support for notched phones */
+  .container-survey {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    min-height: 100dvh; /* Dynamic viewport height */
+  }
+
+  /* Disable background animations on mobile for performance */
+  .floating-bg::before {
+    animation: none;
+    opacity: 0.03;
+  }
+
+  /* Hide floating elements that clutter mobile view */
+  .floating-bubble,
+  .floating-blob,
+  .accent-dot {
+    display: none !important;
+  }
+
+  /* Glass card - full width, less padding */
+  .glass-card {
+    padding: 1.25rem;
+    margin: 0 -0.5rem;
+    width: calc(100% + 1rem);
+    border-radius: 1rem;
+  }
+
+  /* Headings - smaller but readable */
+  h1 {
+    font-size: 1.5rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.75rem;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Large touch-friendly buttons */
+  .btn-primary,
+  .btn-secondary {
+    min-height: 52px;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    width: 100%;
+    justify-content: center;
+    border-radius: 0.75rem;
+  }
+
+  /* Checkbox items - larger touch targets */
   .checkbox-item {
     padding: 1rem;
     gap: 0.75rem;
+    min-height: 56px;
   }
 
   .checkbox-box {
     width: 1.75rem;
     height: 1.75rem;
+    flex-shrink: 0;
   }
 
-  /* Hide floating chat bubbles on mobile (too cluttered) */
-  .floating-bubble {
-    display: none;
+  .checkbox-item label {
+    font-size: 0.95rem;
+    line-height: 1.4;
   }
 
-  /* Reduce floating elements opacity */
-  .floating-blob {
-    opacity: 0.04;
-  }
-
-  /* Container padding */
-  .container-survey {
-    padding: 1rem;
-  }
-
-  /* Card padding */
-  .glass-card {
-    padding: 1.25rem;
-  }
-
-  /* Smaller headings on mobile */
-  h1 {
-    font-size: 1.75rem !important;
-  }
-
-  /* Input toggle stacks better */
+  /* Input toggle - stack vertically */
   .input-toggle {
     flex-direction: column;
     gap: 0.5rem;
@@ -1158,33 +1187,81 @@ textarea:focus {
   .input-toggle-option {
     width: 100%;
     justify-content: center;
-    padding: 0.75rem;
+    padding: 0.875rem;
+    font-size: 0.95rem;
   }
 
-  /* Ranking items larger */
+  /* Voice recorder - larger and centered */
+  .recorder-container {
+    padding: 1.5rem 1rem;
+  }
+
+  /* Ranking items - easier to drag */
   .ranking-item {
     padding: 1rem;
     font-size: 0.95rem;
+    min-height: 56px;
+    touch-action: none; /* Prevent scroll interference */
   }
 
   .ranking-slot {
     min-width: 2.5rem;
+    height: 2.5rem;
     font-size: 1rem;
+    font-weight: 600;
   }
 
-  /* Progress bar simplified */
+  .ranking-handle {
+    padding: 0.5rem;
+    margin-right: 0.5rem;
+  }
+
+  /* Progress bar */
   .progress-track {
     height: 6px;
+    margin-bottom: 0.5rem;
   }
 
-  /* Make trust badges stack on very small screens */
+  /* Step indicator text */
+  .text-xs {
+    font-size: 0.75rem;
+  }
+
+  /* Trust badges - wrap nicely */
   .trust-badge {
     padding: 0.4rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+  }
+
+  /* Textarea - full width, good height */
+  textarea {
+    min-height: 140px;
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding: 1rem;
+  }
+
+  /* Fix scrolling issues */
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  /* Animations - reduce motion for performance */
+  .animate-fade-in {
+    animation-duration: 0.3s;
+  }
+
+  .stagger-children > * {
+    animation-duration: 0.3s;
+  }
+
+  /* Navigation buttons container */
+  .mt-auto.pt-8 {
+    padding-top: 1.5rem;
   }
 }
 
-/* Extra small screens */
+/* Extra small screens (iPhone SE, etc.) */
 @media (max-width: 380px) {
   .container-survey {
     padding: 0.75rem;
@@ -1195,6 +1272,70 @@ textarea:focus {
   }
 
   h1 {
-    font-size: 1.5rem !important;
+    font-size: 1.35rem !important;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.95rem;
+  }
+
+  .checkbox-item {
+    padding: 0.875rem;
+  }
+
+  .ranking-item {
+    padding: 0.875rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Landscape mobile - adjust layout */
+@media (max-width: 640px) and (orientation: landscape) {
+  .container-survey {
+    min-height: auto;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .glass-card {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects that look glitchy on touch */
+  .btn-primary:hover,
+  .btn-secondary:hover {
+    transform: none;
+  }
+
+  .checkbox-item:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .ranking-item:hover {
+    transform: none;
+  }
+
+  /* Add active states instead */
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .checkbox-item:active {
+    background: rgba(34, 197, 94, 0.08);
   }
 }

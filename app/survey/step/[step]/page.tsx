@@ -344,9 +344,9 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         const data = formData as Record<string, unknown>;
 
         switch (step) {
-            case '1': // Voice/text input - check for text OR recording
+            case '1': // Voice/text input
                 return !!(data.step1Text || data.step1Recording);
-            case '2': // Checkbox selection
+            case '2': // Checkbox selection - issues
                 return (formData.issues?.length || 0) > 0;
             case '3': // Ranking - always valid if issues exist
                 return (formData.issues?.length || 0) > 0;
@@ -354,16 +354,16 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                 return !!(data.step4Text || data.step4Recording);
             case '5': // Voice/text input
                 return !!(data.step5Text || data.step5Recording);
-            case '6': // Checkbox selection
+            case '6': // Voice/text input
+                return !!(data.step6Text || data.step6Recording);
+            case '7': // Checkbox selection - benefits
                 return (formData.benefits?.length || 0) > 0;
-            case '7': // Voice/text input
-                return !!(data.step7Text || data.step7Recording);
-            case '8': // Voice/text input
-                return !!(data.step8Text || data.step8Recording);
-            case '9': // Voice/text input
-                return !!(data.step9Text || data.step9Recording);
-            case '10': // Voice/text input
-                return !!(data.step10Text || data.step10Recording);
+            case '8': // Form fields - ALL fields required
+                return !!(formData.kidAges && formData.kidsWithPhones && formData.currentDevice && formData.deviceDuration);
+            case '9': // Textarea - clickMotivation
+                return !!(formData.clickMotivation);
+            case '10': // Textarea - anythingElse (required)
+                return !!(formData.anythingElse);
             default:
                 return true;
         }

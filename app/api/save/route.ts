@@ -13,6 +13,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Validate email format if provided
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const validEmail = formData.email && emailRegex.test(formData.email) ? formData.email : null;
+
         // Upsert the survey response
         const { data, error } = await supabaseAdmin
             .from('survey_responses')
@@ -21,7 +25,7 @@ export async function POST(request: NextRequest) {
                 form_data: formData,
                 current_step: formData.currentStep || 'unknown',
                 is_completed: formData.isCompleted || false,
-                email: formData.email || null,
+                email: validEmail,
                 updated_at: new Date().toISOString(),
             }, {
                 onConflict: 'session_id'

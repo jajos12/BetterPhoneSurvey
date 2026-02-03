@@ -66,10 +66,12 @@ export function VoiceTextInput({
                 </button>
             </div>
 
-            {/* Content based on mode */}
-            {mode === 'voice' ? (
+            {/* Both components always mounted, toggle visibility to preserve state */}
+            <div className={mode === 'voice' ? 'block' : 'hidden'}>
                 <VoiceRecorder sessionId={sessionId} stepNumber={stepNumber} />
-            ) : (
+            </div>
+
+            <div className={mode === 'text' ? 'block' : 'hidden'}>
                 <div className="space-y-3">
                     <textarea
                         className="w-full min-h-[150px] p-4 rounded-xl border-2 border-gray-200 bg-white text-gray-900 placeholder-gray-400 resize-y focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
@@ -81,7 +83,7 @@ export function VoiceTextInput({
                         Take your time to share your thoughts
                     </p>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

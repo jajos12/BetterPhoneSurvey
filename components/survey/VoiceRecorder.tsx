@@ -293,7 +293,7 @@ export function VoiceRecorder({
             {/* Recorded/Processing states */}
             {(state === 'recorded' || state === 'uploading' || state === 'transcribing' || state === 'error') && audioUrl && (
                 <div className="space-y-4">
-                    {/* Audio player */}
+                    {/* Audio player card */}
                     <div className="p-4 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -312,7 +312,25 @@ export function VoiceRecorder({
                                 Re-record
                             </button>
                         </div>
-                        <audio src={audioUrl} controls className="w-full h-10 rounded-lg" />
+                        {/* Audio player with iOS fallback */}
+                        <audio
+                            src={audioUrl}
+                            controls
+                            className="w-full h-10 rounded-lg"
+                            onError={(e) => {
+                                // Hide broken player on iOS
+                                (e.target as HTMLAudioElement).style.display = 'none';
+                                const fallback = (e.target as HTMLAudioElement).nextElementSibling;
+                                if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                            }}
+                        />
+                        {/* Fallback for iOS/unsupported browsers */}
+                        <div className="hidden items-center justify-center gap-2 py-3 px-4 bg-green-50 rounded-lg border border-green-200 text-green-700 text-sm">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Recording captured ({formatDuration(duration)})</span>
+                        </div>
                     </div>
 
                     {/* Status indicator */}

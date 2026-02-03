@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { Button } from '@/components/ui/Button';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { formatDuration } from '@/lib/utils';
 import { useSurvey } from '@/components/providers/SurveyProvider';
 
@@ -12,7 +11,7 @@ interface VoiceRecorderProps {
     onUploadComplete?: (url: string, recordingId: string) => void;
 }
 
-type RecordingState = 'idle' | 'recording' | 'recorded' | 'uploading';
+type RecordingState = 'idle' | 'recording' | 'recorded' | 'uploading' | 'transcribing' | 'error';
 
 export function VoiceRecorder({
     sessionId,
@@ -26,16 +25,68 @@ export function VoiceRecorder({
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [uploadStatus, setUploadStatus] = useState<string>('');
+    const [transcription, setTranscription] = useState<string | null>(null);
+    const [isEditingTranscript, setIsEditingTranscript] = useState(false);
+    const [editedTranscript, setEditedTranscript] = useState('');
+    const [recordingId, setRecordingId] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
     const streamRef = useRef<MediaStream | null>(null);
+    const blobRef = useRef<Blob | null>(null);
+    const mimeTypeRef = useRef<string>('');
 
-    const uploadRecording = useCallback(async (blob: Blob, mimeType: string) => {
+    const MAX_RETRIES = 3;
+
+    // Poll for transcription after upload
+    useEffect(() => {
+        if (!recordingId || transcription) return;
+
+        const pollTranscription = async () => {
+            try {
+                const response = await fetch(`/api/voice/transcription?recordingId=${recordingId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.transcription) {
+                        setTranscription(data.transcription);
+                        setEditedTranscript(data.transcription);
+                        setState('recorded');
+                        setUploadStatus('');
+
+                        // Save transcription as the text input
+                        const textKey = `step${stepNumber}Text`;
+                        updateFormData({ [textKey]: data.transcription });
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch transcription:', err);
+            }
+        };
+
+        // Poll every 2 seconds for up to 30 seconds
+        const interval = setInterval(pollTranscription, 2000);
+        const timeout = setTimeout(() => {
+            clearInterval(interval);
+            // If no transcription after 30s, just mark as done
+            if (!transcription) {
+                setState('recorded');
+                setUploadStatus('');
+            }
+        }, 30000);
+
+        return () => {
+            clearInterval(interval);
+            clearTimeout(timeout);
+        };
+    }, [recordingId, transcription, stepNumber, updateFormData]);
+
+    const uploadRecording = useCallback(async (blob: Blob, mimeType: string, attempt: number = 1) => {
         setState('uploading');
-        setUploadStatus('Saving your response...');
+        setUploadStatus(attempt > 1 ? `Retrying... (${attempt}/${MAX_RETRIES})` : 'Uploading...');
+        setError(null);
 
         const ext = mimeType.includes('ogg') ? 'ogg' : 'webm';
 
@@ -53,36 +104,61 @@ export function VoiceRecorder({
             if (!response.ok) throw new Error('Upload failed');
 
             const data = await response.json();
-            setUploadStatus('Processing...');
+            setRecordingId(data.recordingId);
+            setUploadStatus('Transcribing...');
+            setState('transcribing');
+            setRetryCount(0);
 
-            // Trigger transcription
-            await fetch('/api/transcribe', {
+            // Only trigger transcription (skip extraction - it hallucinates)
+            fetch('/api/transcribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ recordingId: data.recordingId }),
-            });
+            }).catch(console.error);
 
-            // Trigger extraction
-            await fetch('/api/extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ recordingId: data.recordingId }),
-            });
-
-            setUploadStatus('✓ Saved');
-            setState('recorded');
             onUploadComplete?.(data.url, data.recordingId);
 
         } catch (err) {
-            console.error('Upload failed:', err);
-            setError('Upload failed. Recording saved locally.');
-            setState('recorded');
+            console.error(`Upload attempt ${attempt} failed:`, err);
+
+            if (attempt < MAX_RETRIES) {
+                setRetryCount(attempt);
+                setTimeout(() => {
+                    uploadRecording(blob, mimeType, attempt + 1);
+                }, 1000 * attempt);
+            } else {
+                setError('Upload failed. Your recording is saved locally.');
+                setState('error');
+                setUploadStatus('');
+                const recordingKey = `step${stepNumber}Recording`;
+                updateFormData({ [recordingKey]: true });
+            }
         }
-    }, [sessionId, stepNumber, onUploadComplete]);
+    }, [sessionId, stepNumber, onUploadComplete, updateFormData]);
+
+    const retryUpload = useCallback(() => {
+        if (blobRef.current && mimeTypeRef.current) {
+            uploadRecording(blobRef.current, mimeTypeRef.current, 1);
+        }
+    }, [uploadRecording]);
+
+    const saveEditedTranscript = useCallback(() => {
+        setTranscription(editedTranscript);
+        setIsEditingTranscript(false);
+
+        // Update form data with edited transcript
+        const textKey = `step${stepNumber}Text`;
+        updateFormData({ [textKey]: editedTranscript });
+    }, [editedTranscript, stepNumber, updateFormData]);
 
     const startRecording = useCallback(async () => {
         try {
             setError(null);
+            setTranscription(null);
+            setRecordingId(null);
+            setRetryCount(0);
+            setIsEditingTranscript(false);
+            setEditedTranscript('');
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
 
@@ -106,17 +182,17 @@ export function VoiceRecorder({
                 const blob = new Blob(chunksRef.current, { type: actualMimeType });
                 const url = URL.createObjectURL(blob);
                 setAudioUrl(url);
+                blobRef.current = blob;
+                mimeTypeRef.current = actualMimeType;
 
                 const finalDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
                 setDuration(finalDuration);
                 onRecordingComplete?.(blob, finalDuration);
 
-                // Enable Continue button immediately - don't wait for upload
                 const recordingKey = `step${stepNumber}Recording`;
                 updateFormData({ [recordingKey]: true });
 
-                // Upload in background - user can continue without waiting
-                uploadRecording(blob, actualMimeType);
+                uploadRecording(blob, actualMimeType, 1);
 
                 streamRef.current?.getTracks().forEach(track => track.stop());
             };
@@ -133,7 +209,7 @@ export function VoiceRecorder({
             console.error('Failed to start recording:', err);
             setError('Could not access microphone. Please check permissions.');
         }
-    }, [onRecordingComplete, uploadRecording]);
+    }, [onRecordingComplete, uploadRecording, stepNumber, updateFormData]);
 
     const stopRecording = useCallback(() => {
         if (mediaRecorderRef.current && state === 'recording') {
@@ -158,111 +234,186 @@ export function VoiceRecorder({
         setState('idle');
         setError(null);
         setUploadStatus('');
+        setTranscription(null);
+        setRecordingId(null);
+        setRetryCount(0);
+        setIsEditingTranscript(false);
+        setEditedTranscript('');
+        blobRef.current = null;
+        mimeTypeRef.current = '';
     }, [audioUrl]);
 
     return (
-        <div className={`recorder-container ${state === 'recording' ? 'recording' : ''}`}>
-            {error && (
-                <div className="mb-4 p-4 bg-error/10 text-error rounded-xl text-sm border border-error/20">
-                    {error}
-                </div>
-            )}
-
-            {/* Idle State - One Big Clickable Button */}
+        <div className="space-y-4">
+            {/* Idle state */}
             {state === 'idle' && (
-                <div className="stagger-children text-center">
-                    <button
+                <div className="relative">
+                    <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300 hover:border-primary hover:from-primary/5 hover:to-emerald-50 transition-all cursor-pointer"
                         onClick={startRecording}
-                        className="group w-full flex flex-col items-center gap-4 p-6 rounded-2xl bg-white/50 border-2 border-dashed border-primary/30 hover:border-primary hover:bg-white/80 transition-all cursor-pointer"
                     >
-                        <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary-light rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                            <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-emerald-500 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105">
+                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                             </svg>
                         </div>
-                        <div>
-                            <p className="text-text-primary font-semibold text-lg">Tap to Start Recording</p>
-                            <p className="text-text-muted text-sm mt-1">We&apos;re here to listen</p>
+                        <div className="text-center">
+                            <p className="font-semibold text-gray-700">Tap to Record</p>
+                            <p className="text-sm text-gray-500">Share your thoughts via voice</p>
                         </div>
-                    </button>
+                    </div>
                 </div>
             )}
 
-            {/* Recording State - "Listening Ear" with ripples */}
+            {/* Recording state */}
             {state === 'recording' && (
-                <div className="stagger-children">
-                    {/* Ripple container */}
-                    <div className="relative w-24 h-24 mx-auto mb-8">
-                        {/* Ripples */}
-                        <div className="recorder-ripple" />
-                        <div className="recorder-ripple" />
-                        <div className="recorder-ripple" />
-
-                        {/* Center button */}
-                        <button
-                            onClick={stopRecording}
-                            className="absolute inset-0 w-full h-full bg-gradient-to-br from-accent to-accent-light rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95"
-                            style={{
-                                boxShadow: '0 0 30px var(--accent-glow)',
-                            }}
-                        >
-                            <div className="w-6 h-6 bg-white rounded-sm" />
-                        </button>
+                <div className="relative">
+                    <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-red-50 border-2 border-red-300">
+                        <div className="relative">
+                            <div className="absolute inset-0 w-20 h-20 rounded-full bg-red-400 animate-ping opacity-25"></div>
+                            <button
+                                onClick={stopRecording}
+                                className="relative w-20 h-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all"
+                            >
+                                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-red-600 tabular-nums">{formatDuration(duration)}</p>
+                            <p className="text-red-500 font-medium flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                Recording... Tap to stop
+                            </p>
+                        </div>
                     </div>
-
-                    {/* Timer */}
-                    <div className="text-3xl font-bold text-accent mb-4 font-mono">
-                        {formatDuration(duration)}
-                    </div>
-
-                    <p className="text-text-secondary mb-6 text-lg animate-gentle-pulse">
-                        We&apos;re listening... Take your time.
-                    </p>
-
-                    <Button onClick={stopRecording} variant="secondary" size="lg">
-                        <span className="text-xl">⏹️</span>
-                        Finish Recording
-                    </Button>
                 </div>
             )}
 
-            {/* Recorded/Uploading State */}
-            {(state === 'recorded' || state === 'uploading') && audioUrl && (
-                <div className="stagger-children">
+            {/* Recorded/Processing states */}
+            {(state === 'recorded' || state === 'uploading' || state === 'transcribing' || state === 'error') && audioUrl && (
+                <div className="space-y-4">
                     {/* Audio player */}
-                    <div className="p-4 bg-white/70 rounded-xl mb-4 border border-primary/10">
-                        <audio src={audioUrl} controls className="w-full mb-2" />
-                        <p className="text-sm text-text-muted text-center">
-                            Duration: {formatDuration(duration)}
-                        </p>
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-medium text-gray-800">Your Recording</p>
+                                <p className="text-sm text-gray-500">{formatDuration(duration)}</p>
+                            </div>
+                            <button
+                                onClick={resetRecording}
+                                className="px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                            >
+                                Re-record
+                            </button>
+                        </div>
+                        <audio src={audioUrl} controls className="w-full h-10 rounded-lg" />
                     </div>
 
-                    {/* Status */}
-                    {state === 'uploading' && (
-                        <div className="flex items-center justify-center gap-2 text-primary mb-4">
-                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                            <span>{uploadStatus}</span>
+                    {/* Status indicator */}
+                    {(state === 'uploading' || state === 'transcribing') && (
+                        <div className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <svg className="w-5 h-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            <span className="text-blue-700 font-medium">{uploadStatus || 'Processing...'}</span>
                         </div>
                     )}
 
-                    {state === 'recorded' && uploadStatus && (
-                        <p className="text-success mb-4 font-medium">
-                            {uploadStatus}
-                        </p>
+                    {/* Error with retry */}
+                    {state === 'error' && (
+                        <div className="flex items-center justify-between gap-3 py-3 px-4 bg-amber-50 rounded-xl border border-amber-200">
+                            <div className="flex items-center gap-2">
+                                <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span className="text-amber-800 text-sm">{error}</span>
+                            </div>
+                            <button
+                                onClick={retryUpload}
+                                className="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium flex-shrink-0"
+                            >
+                                Retry
+                            </button>
+                        </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex gap-3 justify-center">
-                        <Button
-                            variant="secondary"
-                            onClick={resetRecording}
-                            disabled={state === 'uploading'}
-                        >
-                            Record Again
-                        </Button>
-                    </div>
+                    {/* Editable transcription */}
+                    {transcription && (
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs text-green-700 font-semibold flex items-center gap-1.5 uppercase tracking-wide">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Transcribed
+                                </p>
+                                {!isEditingTranscript ? (
+                                    <button
+                                        onClick={() => setIsEditingTranscript(true)}
+                                        className="text-xs text-green-700 hover:text-green-900 font-medium flex items-center gap-1"
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                        Edit
+                                    </button>
+                                ) : null}
+                            </div>
+
+                            {isEditingTranscript ? (
+                                <div className="space-y-2">
+                                    <textarea
+                                        value={editedTranscript}
+                                        onChange={(e) => setEditedTranscript(e.target.value)}
+                                        className="w-full p-3 text-gray-700 bg-white border border-green-300 rounded-lg resize-y min-h-[80px] focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        placeholder="Edit your transcript..."
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                        <button
+                                            onClick={() => {
+                                                setEditedTranscript(transcription);
+                                                setIsEditingTranscript(false);
+                                            }}
+                                            className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={saveEditedTranscript}
+                                            className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                        >
+                                            Save
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-gray-700 leading-relaxed">{transcription}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Success when no transcription */}
+                    {state === 'recorded' && !transcription && !error && (
+                        <p className="text-center text-sm text-green-600 font-medium flex items-center justify-center gap-1.5">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Recording saved! You can continue.
+                        </p>
+                    )}
                 </div>
+            )}
+
+            {/* Microphone error */}
+            {error && state === 'idle' && (
+                <p className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-xl">{error}</p>
             )}
         </div>
     );

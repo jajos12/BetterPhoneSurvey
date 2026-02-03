@@ -238,7 +238,7 @@ function Step8Content() {
 }
 
 function Step9Content() {
-    const { formData, updateFormData } = useSurvey();
+    const { sessionId } = useSurvey();
 
     return (
         <>
@@ -246,18 +246,13 @@ function Step9Content() {
                 What made you want to take this survey today?
             </p>
 
-            <textarea
-                className="input-base min-h-[150px] resize-y"
-                placeholder="Share what brought you here..."
-                value={formData.clickMotivation || ''}
-                onChange={(e) => updateFormData({ clickMotivation: e.target.value })}
-            />
+            <VoiceTextInput sessionId={sessionId} stepNumber={9} placeholder="Share what brought you here..." />
         </>
     );
 }
 
 function Step10Content() {
-    const { formData, updateFormData } = useSurvey();
+    const { sessionId } = useSurvey();
 
     return (
         <>
@@ -265,12 +260,7 @@ function Step10Content() {
                 Is there anything else you&apos;d like us to know?
             </p>
 
-            <textarea
-                className="input-base min-h-[150px] resize-y"
-                placeholder="Any other thoughts, concerns, or suggestions..."
-                value={formData.anythingElse || ''}
-                onChange={(e) => updateFormData({ anythingElse: e.target.value })}
-            />
+            <VoiceTextInput sessionId={sessionId} stepNumber={10} placeholder="Any other thoughts, concerns, or suggestions..." />
         </>
     );
 }
@@ -360,16 +350,19 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                 return (formData.benefits?.length || 0) > 0;
             case '8': // Form fields - ALL fields required
                 return !!(formData.kidAges && formData.kidsWithPhones && formData.currentDevice && formData.deviceDuration);
-            case '9': // Textarea - clickMotivation
-                return !!(formData.clickMotivation);
-            case '10': // Textarea - anythingElse (required)
-                return !!(formData.anythingElse);
+            case '9': // Voice/text input
+                return !!(data.step9Text || data.step9Recording);
+            case '10': // Voice/text input
+                return !!(data.step10Text || data.step10Recording);
             default:
                 return true;
         }
     };
 
+    const [isNavigating, setIsNavigating] = useState(false);
+
     const handleNext = async () => {
+        setIsNavigating(true);
         const timeSpentMs = Date.now() - stepStartTime.current;
         trackStepComplete(step, timeSpentMs);
 
@@ -390,13 +383,14 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                 });
             } catch (err) {
                 console.error('Failed to save progress:', err);
-                // Continue navigation even if save fails? 
-                // Prefer to continue so user isn't stuck.
+                // Continue navigation even if save fails
             }
         }
 
         if (next) {
             router.push(next.path);
+        } else {
+            setIsNavigating(false);
         }
     };
 
@@ -432,33 +426,109 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                 </div>
 
                 {/* Navigation */}
-                <div className="mt-auto pt-8 space-y-4">
-                    {/* Main buttons - stack on mobile, row on desktop */}
-                    <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3">
-                        <Button variant="secondary" onClick={handleBack} className="w-full sm:w-auto">
-                            Back
-                        </Button>
-
-                        <div className="flex-1 flex justify-center sm:justify-end">
-                            <SkipButton onClick={handleNext} />
+                <div className="mt-auto pt-8">
+                    {/* Desktop layout */}
+                    <div className="hidden sm:flex items-center justify-between gap-4">
+                        {/* Left: Back + Skip */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleBack}
+                                className="flex items-center gap-2 px-5 py-3 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back
+                            </button>
+                            <button
+                                onClick={handleNext}
+                                className="px-4 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-all"
+                            >
+                                Skip
+                            </button>
                         </div>
 
-                        <Button
+                        {/* Right: Continue */}
+                        <button
                             onClick={handleNext}
-                            disabled={!stepIsValid}
-                            className={`w-full sm:w-auto ${!stepIsValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!stepIsValid || isNavigating}
+                            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold transition-all shadow-lg ${stepIsValid && !isNavigating
+                                    ? 'bg-gradient-to-r from-primary to-emerald-500 text-white hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
                         >
-                            {step === '10' ? 'Almost Done' : 'Continue'}
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                        </Button>
+                            {isNavigating ? (
+                                <>
+                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    {step === '10' ? 'Almost Done' : 'Continue'}
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Mobile layout */}
+                    <div className="sm:hidden space-y-3">
+                        {/* Continue button - prominent at top */}
+                        <button
+                            onClick={handleNext}
+                            disabled={!stepIsValid || isNavigating}
+                            className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-lg transition-all ${stepIsValid && !isNavigating
+                                    ? 'bg-gradient-to-r from-primary to-emerald-500 text-white shadow-lg active:scale-[0.98]'
+                                    : 'bg-gray-200 text-gray-400'
+                                }`}
+                        >
+                            {isNavigating ? (
+                                <>
+                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    {step === '10' ? 'Almost Done' : 'Continue'}
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </>
+                            )}
+                        </button>
+
+                        {/* Back and Skip row */}
+                        <div className="flex items-center justify-between">
+                            <button
+                                onClick={handleBack}
+                                className="flex items-center gap-2 px-4 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl font-medium transition-all active:scale-95"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back
+                            </button>
+                            <button
+                                onClick={handleNext}
+                                className="px-4 py-2.5 text-gray-500 hover:text-gray-700 rounded-lg text-sm font-medium transition-all active:scale-95"
+                            >
+                                Skip
+                            </button>
+                        </div>
                     </div>
 
                     {/* Hint when Continue is disabled */}
                     {!stepIsValid && (
-                        <p className="text-center text-sm text-text-muted">
-                            Please provide a response to continue, or skip this question
+                        <p className="text-center text-sm text-text-muted mt-3">
+                            Please provide a response to continue
                         </p>
                     )}
                 </div>

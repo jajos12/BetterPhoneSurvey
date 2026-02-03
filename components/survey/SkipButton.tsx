@@ -1,35 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-
 interface SkipButtonProps {
     onClick: () => void;
 }
 
 export function SkipButton({ onClick }: SkipButtonProps) {
-    const [confirmMode, setConfirmMode] = useState(false);
-
-    const handleClick = () => {
-        if (confirmMode) {
-            onClick();
-            setConfirmMode(false);
-        } else {
-            setConfirmMode(true);
-            // Reset after 3 seconds if not confirmed
-            setTimeout(() => setConfirmMode(false), 3000);
-        }
-    };
-
     return (
         <button
             type="button"
-            onClick={handleClick}
-            className={`text-xs transition-all ${confirmMode
-                    ? 'text-amber-600 font-medium'
-                    : 'text-text-muted/60 hover:text-text-muted'
-                }`}
+            onClick={onClick}
+            className="text-sm text-text-muted hover:text-text-secondary transition-colors px-3 py-2 rounded-lg hover:bg-gray-100"
         >
-            {confirmMode ? 'Tap again to skip →' : 'skip'}
+            Skip
         </button>
     );
 }

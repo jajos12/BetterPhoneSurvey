@@ -46,40 +46,57 @@ export function VoiceTextInput({
         }
     }, [data, fieldKey]);
 
+    // Use ref for text to avoid restarting polling when text changes
+    const textRef = useRef(text);
+    textRef.current = text;
+
     // Poll for transcription
     useEffect(() => {
         if (!recordingId || !isTranscribing) return;
 
+        let isCancelled = false;
+
         const pollTranscription = async () => {
+            if (isCancelled) return;
+
             try {
                 const response = await fetch(`/api/voice/transcription?recordingId=${recordingId}`);
-                if (response.ok) {
+                if (response.ok && !isCancelled) {
                     const result = await response.json();
                     if (result.transcription) {
                         // Append transcription to existing text
-                        const newText = text ? `${text}\n\n${result.transcription}` : result.transcription;
+                        const currentText = textRef.current;
+                        const newText = currentText ? `${currentText}\n\n${result.transcription}` : result.transcription;
                         setText(newText);
                         updateFormData({ [fieldKey]: newText });
                         setIsTranscribing(false);
                         setRecordingId(null);
+                        setRecordingState('idle');
+                        return true; // Done
                     }
                 }
             } catch (err) {
                 console.error('Failed to fetch transcription:', err);
             }
+            return false;
         };
 
-        const interval = setInterval(pollTranscription, 2000);
+        // Poll immediately, then every 3 seconds
+        pollTranscription();
+        const interval = setInterval(pollTranscription, 3000);
+
         const timeout = setTimeout(() => {
             clearInterval(interval);
             setIsTranscribing(false);
+            setRecordingState('idle');
         }, 30000);
 
         return () => {
+            isCancelled = true;
             clearInterval(interval);
             clearTimeout(timeout);
         };
-    }, [recordingId, isTranscribing, text, fieldKey, updateFormData]);
+    }, [recordingId, isTranscribing, fieldKey, updateFormData]);
 
     const handleTextChange = (newText: string) => {
         setText(newText);

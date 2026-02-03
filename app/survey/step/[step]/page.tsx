@@ -359,38 +359,29 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         }
     };
 
-    const [isNavigating, setIsNavigating] = useState(false);
-
-    const handleNext = async () => {
-        setIsNavigating(true);
+    const handleNext = () => {
         const timeSpentMs = Date.now() - stepStartTime.current;
         trackStepComplete(step, timeSpentMs);
 
         const next = getNextStep(step);
 
-        // Save form data and update to next step
-        if (sessionId) {
-            try {
-                await fetch('/api/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sessionId,
-                        ...formData,
-                        currentStep: next?.id || step,
-                        isCompleted: step === '10', // Mark completed on last step
-                    }),
-                });
-            } catch (err) {
-                console.error('Failed to save progress:', err);
-                // Continue navigation even if save fails
-            }
-        }
-
+        // Navigate IMMEDIATELY - don't wait for save
         if (next) {
             router.push(next.path);
-        } else {
-            setIsNavigating(false);
+        }
+
+        // Save in background (fire and forget)
+        if (sessionId) {
+            fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId,
+                    ...formData,
+                    currentStep: next?.id || step,
+                    isCompleted: step === '10',
+                }),
+            }).catch(err => console.error('Failed to save:', err));
         }
     };
 
@@ -451,28 +442,16 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                         {/* Right: Continue */}
                         <button
                             onClick={handleNext}
-                            disabled={!stepIsValid || isNavigating}
-                            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold transition-all shadow-lg ${stepIsValid && !isNavigating
+                            disabled={!stepIsValid}
+                            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold transition-all shadow-lg ${stepIsValid
                                     ? 'bg-gradient-to-r from-primary to-emerald-500 text-white hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
                         >
-                            {isNavigating ? (
-                                <>
-                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                    </svg>
-                                    Saving...
-                                </>
-                            ) : (
-                                <>
-                                    {step === '10' ? 'Almost Done' : 'Continue'}
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                    </svg>
-                                </>
-                            )}
+                            {step === '10' ? 'Almost Done' : 'Continue'}
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
                         </button>
                     </div>
 
@@ -481,28 +460,16 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                         {/* Continue button - prominent at top */}
                         <button
                             onClick={handleNext}
-                            disabled={!stepIsValid || isNavigating}
-                            className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-lg transition-all ${stepIsValid && !isNavigating
+                            disabled={!stepIsValid}
+                            className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-lg transition-all ${stepIsValid
                                     ? 'bg-gradient-to-r from-primary to-emerald-500 text-white shadow-lg active:scale-[0.98]'
                                     : 'bg-gray-200 text-gray-400'
                                 }`}
                         >
-                            {isNavigating ? (
-                                <>
-                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                    </svg>
-                                    Saving...
-                                </>
-                            ) : (
-                                <>
-                                    {step === '10' ? 'Almost Done' : 'Continue'}
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                    </svg>
-                                </>
-                            )}
+                            {step === '10' ? 'Almost Done' : 'Continue'}
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
                         </button>
 
                         {/* Back and Skip row */}

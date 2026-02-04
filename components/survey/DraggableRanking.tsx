@@ -72,10 +72,24 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
         setDragOver(null);
     };
 
+    const itemPositions = useRef<{ center: number; height: number; top: number; bottom: number }[]>([]);
+
     // Touch Drag Handlers - SMOOTH SHIFT
     const handleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
         const touch = e.touches[0];
         touchStartY.current = touch.clientY;
+
+        // Capture all item positions at the start of the drag for stable hit-testing
+        itemPositions.current = itemRefs.current.map(ref => {
+            if (!ref) return { center: 0, height: 0, top: 0, bottom: 0 };
+            const rect = ref.getBoundingClientRect();
+            return {
+                center: rect.top + rect.height / 2,
+                height: rect.height,
+                top: rect.top,
+                bottom: rect.bottom
+            };
+        });
 
         setTouchDragging(index);
         setDragOver(index);
@@ -87,41 +101,39 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
     }, []);
 
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        if (touchDragging === null) return;
+        if (touchDragging === null || !containerRef.current) return;
 
         // Prevent scroll while dragging
         e.preventDefault();
 
         const touch = e.touches[0];
-        const deltaY = touch.clientY - touchStartY.current;
         const touchY = touch.clientY;
+        const deltaY = touchY - touchStartY.current;
         setTouchOffset(deltaY);
 
-        // Find which slot we're over using direct hit-test
-        let targetIndex = dragOver;
+        // Find the target index by comparing touchY to stable initial centers
+        let targetIndex = touchDragging;
 
-        // Quick boundary checks
-        const firstRect = itemRefs.current[0]?.getBoundingClientRect();
-        const lastRect = itemRefs.current[itemRefs.current.length - 1]?.getBoundingClientRect();
+        // Check boundaries first
+        const first = itemPositions.current[0];
+        const last = itemPositions.current[itemPositions.current.length - 1];
 
-        if (firstRect && touchY < firstRect.top) {
+        if (touchY < first.top) {
             targetIndex = 0;
-        } else if (lastRect && touchY > lastRect.bottom) {
-            targetIndex = itemRefs.current.length - 1;
+        } else if (touchY > last.bottom) {
+            targetIndex = itemPositions.current.length - 1;
         } else {
-            for (let i = 0; i < itemRefs.current.length; i++) {
-                const ref = itemRefs.current[i];
-                if (ref) {
-                    const rect = ref.getBoundingClientRect();
-                    if (touchY >= rect.top && touchY <= rect.bottom) {
-                        targetIndex = i;
-                        break;
-                    }
+            // Find which item we've dragged into based on centers
+            for (let i = 0; i < itemPositions.current.length; i++) {
+                const pos = itemPositions.current[i];
+                if (touchY >= pos.top && touchY <= pos.bottom) {
+                    targetIndex = i;
+                    break;
                 }
             }
         }
 
-        if (targetIndex !== null && targetIndex !== dragOver) {
+        if (targetIndex !== dragOver) {
             setDragOver(targetIndex);
             if (navigator.vibrate) {
                 navigator.vibrate(5);
@@ -157,14 +169,14 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
 
                 // Calculate "Shift" for other items
                 if (isOtherItem && dragOver !== null && touchDragging !== null) {
-                    const itemHeight = 60; // Approximate height + gap
+                    const draggingItemHeight = itemPositions.current[touchDragging]?.height || 60;
+                    const gap = 12; // space-y-3 = 0.75rem = 12px
+                    const totalShift = draggingItemHeight + gap;
 
                     if (index > touchDragging && index <= dragOver) {
-                        // Dragging down: items between start and end shift UP
-                        translateY = -itemHeight;
+                        translateY = -totalShift;
                     } else if (index < touchDragging && index >= dragOver) {
-                        // Dragging up: items between end and start shift DOWN
-                        translateY = itemHeight;
+                        translateY = totalShift;
                     }
                 }
 
@@ -172,27 +184,30 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
                     <div
                         key={item.value}
                         ref={(el) => { itemRefs.current[index] = el; }}
-                        style={{
-                            transform: isDragging
-                                ? `translateY(${touchOffset}px) scale(1.04)`
-                                : `translateY(${translateY}px)`,
-                            zIndex: isDragging ? 50 : 0,
-                            transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.2, 0, 0, 1)',
-                            position: 'relative',
-                            touchAction: 'none'
-                        }}
-                        className={`group flex items-stretch gap-3 ${isDragging ? 'pointer-events-none' : ''}`}
+                        className="relative flex items-center gap-3"
+                        style={{ touchAction: 'none' }}
                     >
-                        {/* Rank number */}
-                        <div className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center font-bold transition-all duration-300 ${isDragging
-                            ? 'bg-primary text-white shadow-lg'
-                            : 'bg-gray-100 text-gray-500'
-                            }`}>
+                        {/* Static Rank number */}
+                        <div className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center font-bold bg-gray-100 text-gray-400 z-0`}>
                             {index + 1}
                         </div>
 
-                        {/* Draggable item */}
+                        {/* Draggable item wrapper */}
                         <div
+                            style={{
+                                transform: isDragging
+                                    ? `translateY(${touchOffset}px) scale(1.02)`
+                                    : `translateY(${translateY}px)`,
+                                zIndex: isDragging ? 50 : 10,
+                                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                                flex: 1
+                            }}
+                            className={`group flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 select-none cursor-grab active:cursor-grabbing ${isDragging
+                                ? 'bg-white border-primary shadow-2xl ring-4 ring-primary/5'
+                                : dragOver === index && dragging !== null
+                                    ? 'bg-primary/5 border-primary ring-2 ring-primary/10'
+                                    : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-md'
+                                }`}
                             draggable
                             onDragStart={(e) => handleDragStart(e, item.value)}
                             onDragEnd={handleDragEnd}
@@ -201,12 +216,6 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
                             onTouchStart={(e) => handleTouchStart(e, index)}
                             onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
-                            className={`flex-1 flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 transition-all duration-300 cursor-grab active:cursor-grabbing select-none ${isDragging
-                                ? 'bg-white border-primary shadow-2xl ring-4 ring-primary/5'
-                                : dragOver === index && dragging !== null
-                                    ? 'bg-primary/5 border-primary ring-2 ring-primary/10'
-                                    : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-md'
-                                }`}
                         >
                             {/* Drag handle */}
                             <div className={`transition-colors ${isDragging ? 'text-primary' : 'text-gray-300 group-hover:text-gray-400'}`}>
@@ -216,8 +225,7 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
                             </div>
 
                             {/* Label */}
-                            <span className={`text-base font-semibold flex-1 transition-colors ${isDragging ? 'text-primary' : 'text-text-primary'
-                                }`}>
+                            <span className={`text-base font-semibold flex-1 transition-colors ${isDragging ? 'text-primary' : 'text-text-primary'}`}>
                                 {item.label}
                             </span>
                         </div>

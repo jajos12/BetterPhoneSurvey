@@ -24,7 +24,7 @@ export default function HomePage() {
               {/* Reward badge */}
               <div className="inline-flex items-center gap-2 text-primary font-bold mb-6 bg-primary/5 px-6 py-3 rounded-2xl border-2 border-primary/20 shadow-sm">
                 <span className="text-xl">🎁</span>
-                <span>Complete the survey for a $50 BetterPhone Gift Card</span>
+                <span>Complete the survey for a $100 BetterPhone Gift Card</span>
               </div>
 
               {/* Empathetic intro */}

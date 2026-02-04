@@ -95,8 +95,8 @@ export default function NotAFitPage() {
                     That&apos;s great!
                 </h1>
 
-                <p className="text-text-secondary mb-8 max-w-md">
-                    We&apos;d love if you shared this survey with them. Your referral helps us build a better phone for all families.
+                <p className="text-text-secondary mb-8 max-w-md text-center">
+                    We&apos;d love if you shared this survey with them. Both you and they will receive a <strong className="text-text-primary">$100 gift card</strong> upon completion.
                 </p>
 
                 <div className="space-y-4 w-full max-w-sm">

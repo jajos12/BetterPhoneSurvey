@@ -7,7 +7,8 @@ export interface SurveyFormData {
     painCheck: PainCheckValue | null;
 
     // Step 1: Voice - Brain dump
-    voiceStep1?: string; // URL to recording
+    step1Text?: string;
+    step1Recording?: boolean;
 
     // Step 2: Issues checkboxes
     issues: string[];
@@ -17,37 +18,51 @@ export interface SurveyFormData {
     ranking: string[];
 
     // Step 4: Voice - Urgency
-    voiceStep4?: string;
+    step4Text?: string;
+    step4Recording?: boolean;
 
     // Step 5: Voice - Solutions tried
-    voiceStep5?: string;
+    step5Text?: string;
+    step5Recording?: boolean;
 
     // Step 6: Voice - Switching concerns
-    voiceStep6?: string;
+    step6Text?: string;
+    step6Recording?: boolean;
 
     // Step 7: Benefits checkboxes
     benefits: string[];
 
-    // Step 8: Demographics
-    kidAges: string;
-    kidsWithPhones: string;
-    currentDevice: string;
-    deviceDuration: string;
-    dailyUsage: string;
-    familyStructure: string;
-    householdIncome: string;
+    // Step 8: Demographics + Voice
+    kidAges?: string;
+    kidsWithPhones?: string;
+    currentDevice?: string;
+    deviceDuration?: string;
+    dailyUsage?: string;
+    familyStructure?: string;
+    householdIncome?: string;
+    step8Text?: string;
+    step8Recording?: boolean;
 
     // Step 9: Advice sources
     adviceSources?: string[];
 
-    // Step 10: Price willingness
-    priceWillingness?: string;
+    // Step 10: Price willingness (Multi-select)
+    priceWillingness?: string[];
 
     // Step 11: Click motivation
-    clickMotivation: string;
+    step11Text?: string;
+    step11Recording?: boolean;
 
     // Step 12: Anything else
-    anythingElse: string;
+    step12Text?: string;
+    step12Recording?: boolean;
+
+    // Meta
+    currentStep?: string;
+    isCompleted?: boolean;
+
+    // Referral tracking
+    knowsOthersWithStress?: boolean;
 
     // Email
     emailOptIn: boolean;

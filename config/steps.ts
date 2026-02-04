@@ -80,16 +80,16 @@ export const STEPS: StepConfig[] = [
     {
         id: '10',
         path: '/survey/step/10',
-        type: 'choice',
+        type: 'checkbox',
         title: 'Price Willingness',
-        description: 'If this phone solved your child’s device problems, what would you be willing to pay?',
+        description: 'Select all the price ranges you would be willing to pay if this phone solved your child’s device problems.',
     },
     {
         id: '11',
         path: '/survey/step/11',
         type: 'text',
-        title: 'Why did you click on this survey?',
-        description: 'What made you want to take this survey today?',
+        title: 'Why did you click?',
+        description: 'Was there anything that made you almost not click?',
     },
     {
         id: '12',

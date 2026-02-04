@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 export function Confetti() {
     useEffect(() => {
         // Fire confetti from multiple angles
-        const duration = 3000;
+        const duration = 2000;
         const end = Date.now() + duration;
 
         const colors = ['#22C55E', '#4ADE80', '#FFD700', '#FF6B4A', '#A78BFA', '#60A5FA'];

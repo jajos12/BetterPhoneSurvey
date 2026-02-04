@@ -25,7 +25,7 @@ function Step1Content() {
                 to just brain dump everything you feel. We are here to listen without judgment.
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={1} placeholder="Share what's been challenging..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={1} placeholder="You can type your response here" />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Talk about how it feels, specific moments, what&apos;s happening day-to-day.
@@ -106,7 +106,7 @@ function Step4Content() {
                 Also, how urgent would you say solving these problems is for you?
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={4} placeholder="Tell us about urgency and why..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={4} placeholder="You can type your response here" />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Consider: On a scale of 1-10, how urgent is solving this? What happens if
@@ -126,7 +126,7 @@ function Step5Content() {
                 spent trying to fix this.
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={5} placeholder="Share what you've tried..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={5} placeholder="You can type your response here" />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Any apps, rules, taking the phone away, other devices — whatever you&apos;ve tried.
@@ -145,7 +145,7 @@ function Step6Content() {
                 And more importantly — <strong>what would make you willing to switch TODAY?</strong>
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={6} placeholder="Share your concerns and what would motivate you to switch..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={6} placeholder="You can type your response here" />
 
             <p className="text-sm text-text-muted italic mt-4">
                 Consider: What is the single biggest thing that would make you say &quot;yes&quot; right now?
@@ -194,7 +194,7 @@ function Step8Content() {
                     <p className="text-sm font-bold text-primary mb-3 flex items-center gap-2">
                         <span>🎙️</span> Answer via Voice (Easier)
                     </p>
-                    <VoiceTextInput sessionId={sessionId} stepNumber={8} voiceOnly={true} placeholder="Tell us about your kids' ages, their devices, and how long they've had them..." />
+                    <VoiceTextInput sessionId={sessionId} stepNumber={8} voiceOnly={true} placeholder="You can type your response here" />
                 </div>
 
                 <div className="relative py-2">
@@ -306,32 +306,45 @@ function Step9Content() {
 
 function Step10Content() {
     const { formData, updateFormData } = useSurvey();
+    const selectedPrices = (formData.priceWillingness as unknown as string[]) || [];
+
+    const togglePrice = (value: string) => {
+        const next = selectedPrices.includes(value)
+            ? selectedPrices.filter(v => v !== value)
+            : [...selectedPrices, value];
+        updateFormData({ priceWillingness: next as any });
+    };
 
     return (
         <>
-            <p className="text-text-secondary mb-6 text-center">
-                If this phone solved your child&apos;s device problems, what would you be willing to pay?
+            <p className="text-text-secondary mb-6 text-center max-w-sm mx-auto">
+                Select all price ranges you would be willing to pay if this phone solved your child&apos;s device problems.
             </p>
 
             <div className="grid grid-cols-1 gap-3 max-w-sm mx-auto">
-                {PRICE_WILLINGNESS_OPTIONS.map((opt) => (
-                    <button
-                        type="button"
-                        key={opt.value}
-                        onClick={() => updateFormData({ priceWillingness: opt.value })}
-                        className={`flex items-center justify-between px-6 py-4 rounded-2xl text-lg font-bold transition-all border-2 ${formData.priceWillingness === opt.value
-                            ? 'bg-primary border-primary text-white shadow-lg scale-[1.02]'
-                            : 'bg-white border-gray-100 text-text-primary hover:border-primary/20 hover:bg-primary/5'
-                            }`}
-                    >
-                        <span>{opt.label}</span>
-                        {formData.priceWillingness === opt.value && (
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                        )}
-                    </button>
-                ))}
+                {PRICE_WILLINGNESS_OPTIONS.map((opt) => {
+                    const isSelected = selectedPrices.includes(opt.value);
+                    return (
+                        <button
+                            type="button"
+                            key={opt.value}
+                            onClick={() => togglePrice(opt.value)}
+                            className={`flex items-center justify-between px-6 py-4 rounded-2xl text-lg font-bold transition-all border-2 ${isSelected
+                                ? 'bg-primary border-primary text-white shadow-lg scale-[1.02]'
+                                : 'bg-white border-gray-100 text-text-primary hover:border-primary/20 hover:bg-primary/5'
+                                }`}
+                        >
+                            <span>{opt.label}</span>
+                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-white border-white text-primary' : 'bg-transparent border-gray-200'}`}>
+                                {isSelected && (
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                )}
+                            </div>
+                        </button>
+                    );
+                })}
             </div>
         </>
     );
@@ -343,10 +356,10 @@ function Step11Content() {
     return (
         <>
             <p className="text-text-secondary mb-6">
-                What made you want to take this survey today? <strong>Was there anything that caused you resistance to clicking, or made you almost not click?</strong>
+                What made you want to take this survey today? <strong>Was there anything that caused you resistance to clicking?</strong>
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={11} placeholder="Share what brought you here..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={11} placeholder="You can type your response here..." />
         </>
     );
 }
@@ -360,7 +373,7 @@ function Step12Content() {
                 Is there anything else you&apos;d like us to know?
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={12} placeholder="Any other thoughts, concerns, or suggestions..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={12} placeholder="You can type your response here" />
         </>
     );
 }
@@ -457,7 +470,7 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
             case '9':
                 return (formData.adviceSources?.length || 0) > 0;
             case '10':
-                return !!formData.priceWillingness;
+                return ((formData.priceWillingness as unknown as string[])?.length || 0) > 0;
             case '11':
                 return !!(data.step11Text || data.step11Recording);
             case '12':

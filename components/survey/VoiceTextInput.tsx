@@ -16,7 +16,7 @@ type RecordingState = 'idle' | 'recording' | 'saved';
 export function VoiceTextInput({
     sessionId,
     stepNumber,
-    placeholder = 'Type your thoughts here...',
+    placeholder = 'You can type your response here',
     voiceOnly = false
 }: VoiceTextInputProps) {
     const { updateFormData, formData } = useSurvey();
@@ -93,9 +93,17 @@ export function VoiceTextInput({
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
 
-            let mimeType = 'audio/ogg';
-            if (!MediaRecorder.isTypeSupported('audio/ogg')) {
-                mimeType = 'audio/webm;codecs=opus';
+            // Prefer webm/opus - it's the modern standard for voice
+            let mimeType = 'audio/webm;codecs=opus';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                // Fallback to plain webm
+                if (MediaRecorder.isTypeSupported('audio/webm')) {
+                    mimeType = 'audio/webm';
+                } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+                    mimeType = 'audio/ogg;codecs=opus';
+                } else {
+                    mimeType = 'audio/ogg'; // Final fallback
+                }
             }
 
             const mediaRecorder = new MediaRecorder(stream, { mimeType });

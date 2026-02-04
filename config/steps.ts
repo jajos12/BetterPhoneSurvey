@@ -51,8 +51,8 @@ export const STEPS: StepConfig[] = [
         id: '6',
         path: '/survey/step/6',
         type: 'voice',
-        title: 'What would make switching hard?',
-        description: 'If you switched your kid to a different phone, what would happen?',
+        title: 'Switching Concerns & Motivation',
+        description: 'What would make switching hard? And what would make you willing to switch TODAY?',
         hasVoice: true,
     },
     {
@@ -72,13 +72,27 @@ export const STEPS: StepConfig[] = [
     {
         id: '9',
         path: '/survey/step/9',
+        type: 'checkbox',
+        title: 'Where do you look for parenting advice?',
+        description: 'Select all the places where you look for advice online.',
+    },
+    {
+        id: '10',
+        path: '/survey/step/10',
+        type: 'choice',
+        title: 'Price Willingness',
+        description: 'If this phone solved your child’s device problems, what would you be willing to pay?',
+    },
+    {
+        id: '11',
+        path: '/survey/step/11',
         type: 'text',
         title: 'Why did you click on this survey?',
         description: 'What made you want to take this survey today?',
     },
     {
-        id: '10',
-        path: '/survey/step/10',
+        id: '12',
+        path: '/survey/step/12',
         type: 'text',
         title: 'Anything else?',
         description: "Is there anything else you'd like us to know?",
@@ -122,6 +136,32 @@ export const BENEFITS_OPTIONS = [
     { value: 'no-social', label: 'No social media' },
     { value: 'parental-control', label: 'Strong parental controls' },
     { value: 'durable', label: 'Durable design for kids' },
+];
+
+export const ADVICE_SOURCES_OPTIONS = [
+    { value: 'facebook', label: 'Facebook Groups' },
+    { value: 'reddit', label: 'Reddit (r/parenting, etc.)' },
+    { value: 'instagram', label: 'Instagram' },
+    { value: 'pediatrician', label: 'Pediatrician' },
+    { value: 'friends', label: 'Friends/Family' },
+    { value: 'blogs', label: 'Parenting Blogs' },
+    { value: 'youtube', label: 'YouTube' },
+    { value: 'other', label: 'Other' },
+];
+
+export const PRICE_WILLINGNESS_OPTIONS = [
+    { value: '100-200', label: '$100 - $200' },
+    { value: '200-300', label: '$200 - $300' },
+    { value: '300-400', label: '$300 - $400' },
+    { value: '400-plus', label: '$400+' },
+];
+
+export const INCOME_OPTIONS = [
+    { value: 'under-50k', label: 'Under $50k' },
+    { value: '50k-100k', label: '$50k - $100k' },
+    { value: '100k-150k', label: '$100k - $150k' },
+    { value: '150k-250k', label: '$150k - $250k' },
+    { value: '250k-plus', label: '$250k+' },
 ];
 
 export function getStepIndex(stepId: string): number {

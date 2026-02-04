@@ -10,7 +10,7 @@ import { CheckboxGroup } from '@/components/ui/CheckboxGroup';
 import { DraggableRanking } from '@/components/survey/DraggableRanking';
 import { SkipButton } from '@/components/survey/SkipButton';
 import { useSurvey } from '@/components/providers/SurveyProvider';
-import { STEPS, ISSUES_OPTIONS, BENEFITS_OPTIONS, getNextStep, getPrevStep } from '@/config/steps';
+import { STEPS, ISSUES_OPTIONS, BENEFITS_OPTIONS, ADVICE_SOURCES_OPTIONS, PRICE_WILLINGNESS_OPTIONS, INCOME_OPTIONS, getNextStep, getPrevStep } from '@/config/steps';
 import { trackStepView, trackStepComplete, trackHesitation } from '@/lib/analytics';
 
 // Step content components
@@ -141,14 +141,14 @@ function Step6Content() {
     return (
         <>
             <p className="text-text-secondary mb-6">
-                If you switched your kid to a different phone, what would happen?
+                If you switched your child to a different phone, what would be the hardest part?
+                And more importantly — <strong>what would make you willing to switch TODAY?</strong>
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={6} placeholder="Tell us about potential reactions..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={6} placeholder="Share your concerns and what would motivate you to switch..." />
 
             <p className="text-sm text-text-muted italic mt-4">
-                Consider: How would they react? What pushback would you get? What would make
-                it easier or harder?
+                Consider: What is the single biggest thing that would make you say &quot;yes&quot; right now?
             </p>
         </>
     );
@@ -189,48 +189,71 @@ function Step8Content() {
             </p>
 
             <div className="space-y-4">
-                <div>
-                    <label className="block font-medium mb-2">Ages of your children</label>
-                    <input
-                        type="text"
-                        className="input-base"
-                        placeholder="e.g., 8, 12, 15"
-                        value={formData.kidAges || ''}
-                        onChange={(e) => updateFormData({ kidAges: e.target.value })}
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block font-medium mb-2 text-sm">Ages of your children</label>
+                        <input
+                            type="text"
+                            className="input-base"
+                            placeholder="e.g., 8, 12, 15"
+                            value={formData.kidAges || ''}
+                            onChange={(e) => updateFormData({ kidAges: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block font-medium mb-2 text-sm">How many have their own phone?</label>
+                        <input
+                            type="text"
+                            className="input-base"
+                            placeholder="e.g., 2"
+                            value={formData.kidsWithPhones || ''}
+                            onChange={(e) => updateFormData({ kidsWithPhones: e.target.value })}
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block font-medium mb-2 text-sm">Current phone/device they use</label>
+                        <input
+                            type="text"
+                            className="input-base"
+                            placeholder="e.g., iPhone 12"
+                            value={formData.currentDevice || ''}
+                            onChange={(e) => updateFormData({ currentDevice: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block font-medium mb-2 text-sm">How long have they had it?</label>
+                        <input
+                            type="text"
+                            className="input-base"
+                            placeholder="e.g., 2 years"
+                            value={formData.deviceDuration || ''}
+                            onChange={(e) => updateFormData({ deviceDuration: e.target.value })}
+                        />
+                    </div>
                 </div>
 
                 <div>
-                    <label className="block font-medium mb-2">How many have their own phone?</label>
-                    <input
-                        type="text"
-                        className="input-base"
-                        placeholder="e.g., 2"
-                        value={formData.kidsWithPhones || ''}
-                        onChange={(e) => updateFormData({ kidsWithPhones: e.target.value })}
-                    />
-                </div>
-
-                <div>
-                    <label className="block font-medium mb-2">Current phone/device they use</label>
-                    <input
-                        type="text"
-                        className="input-base"
-                        placeholder="e.g., iPhone 12, Android tablet"
-                        value={formData.currentDevice || ''}
-                        onChange={(e) => updateFormData({ currentDevice: e.target.value })}
-                    />
-                </div>
-
-                <div>
-                    <label className="block font-medium mb-2">How long have they had it?</label>
-                    <input
-                        type="text"
-                        className="input-base"
-                        placeholder="e.g., 2 years"
-                        value={formData.deviceDuration || ''}
-                        onChange={(e) => updateFormData({ deviceDuration: e.target.value })}
-                    />
+                    <label className="block font-medium mb-2 text-sm text-gray-700 font-semibold mb-3">Household Income (Optional)</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {INCOME_OPTIONS.map((opt) => (
+                            <button
+                                type="button"
+                                key={opt.value}
+                                onClick={() => updateFormData({ householdIncome: opt.value })}
+                                className={`px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border-2 ${formData.householdIncome === opt.value
+                                    ? 'bg-primary border-primary text-white shadow-md'
+                                    : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
+                                    }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
         </>
@@ -238,6 +261,64 @@ function Step8Content() {
 }
 
 function Step9Content() {
+    const { formData, updateFormData } = useSurvey();
+    const [sources, setSources] = useState<string[]>(formData.adviceSources || []);
+
+    const handleChange = (values: string[]) => {
+        setSources(values);
+        updateFormData({ adviceSources: values });
+    };
+
+    return (
+        <>
+            <p className="text-text-secondary mb-6">
+                Where do you look for parenting advice online? Select all that apply:
+            </p>
+
+            <CheckboxGroup
+                name="advice-sources"
+                options={ADVICE_SOURCES_OPTIONS}
+                values={sources}
+                onChange={handleChange}
+            />
+        </>
+    );
+}
+
+function Step10Content() {
+    const { formData, updateFormData } = useSurvey();
+
+    return (
+        <>
+            <p className="text-text-secondary mb-6 text-center">
+                If this phone solved your child&apos;s device problems, what would you be willing to pay?
+            </p>
+
+            <div className="grid grid-cols-1 gap-3 max-w-sm mx-auto">
+                {PRICE_WILLINGNESS_OPTIONS.map((opt) => (
+                    <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() => updateFormData({ priceWillingness: opt.value })}
+                        className={`flex items-center justify-between px-6 py-4 rounded-2xl text-lg font-bold transition-all border-2 ${formData.priceWillingness === opt.value
+                            ? 'bg-primary border-primary text-white shadow-lg scale-[1.02]'
+                            : 'bg-white border-gray-100 text-text-primary hover:border-primary/20 hover:bg-primary/5'
+                            }`}
+                    >
+                        <span>{opt.label}</span>
+                        {formData.priceWillingness === opt.value && (
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        )}
+                    </button>
+                ))}
+            </div>
+        </>
+    );
+}
+
+function Step11Content() {
     const { sessionId } = useSurvey();
 
     return (
@@ -246,12 +327,12 @@ function Step9Content() {
                 What made you want to take this survey today?
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={9} placeholder="Share what brought you here..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={11} placeholder="Share what brought you here..." />
         </>
     );
 }
 
-function Step10Content() {
+function Step12Content() {
     const { sessionId } = useSurvey();
 
     return (
@@ -260,7 +341,7 @@ function Step10Content() {
                 Is there anything else you&apos;d like us to know?
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={10} placeholder="Any other thoughts, concerns, or suggestions..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={12} placeholder="Any other thoughts, concerns, or suggestions..." />
         </>
     );
 }
@@ -277,6 +358,8 @@ const STEP_CONTENT: Record<string, () => React.ReactNode> = {
     '8': Step8Content,
     '9': Step9Content,
     '10': Step10Content,
+    '11': Step11Content,
+    '12': Step12Content,
 };
 
 export default function StepPage({ params }: { params: Promise<{ step: string }> }) {
@@ -334,26 +417,30 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         const data = formData as Record<string, unknown>;
 
         switch (step) {
-            case '1': // Voice/text input
+            case '1':
                 return !!(data.step1Text || data.step1Recording);
-            case '2': // Checkbox selection - issues
+            case '2':
                 return (formData.issues?.length || 0) > 0;
-            case '3': // Ranking - always valid if issues exist
+            case '3':
                 return (formData.issues?.length || 0) > 0;
-            case '4': // Voice/text input
+            case '4':
                 return !!(data.step4Text || data.step4Recording);
-            case '5': // Voice/text input
+            case '5':
                 return !!(data.step5Text || data.step5Recording);
-            case '6': // Voice/text input
+            case '6':
                 return !!(data.step6Text || data.step6Recording);
-            case '7': // Checkbox selection - benefits
+            case '7':
                 return (formData.benefits?.length || 0) > 0;
-            case '8': // Form fields - ALL fields required
+            case '8':
                 return !!(formData.kidAges && formData.kidsWithPhones && formData.currentDevice && formData.deviceDuration);
-            case '9': // Voice/text input
-                return !!(data.step9Text || data.step9Recording);
-            case '10': // Voice/text input
-                return !!(data.step10Text || data.step10Recording);
+            case '9':
+                return (formData.adviceSources?.length || 0) > 0;
+            case '10':
+                return !!formData.priceWillingness;
+            case '11':
+                return !!(data.step11Text || data.step11Recording);
+            case '12':
+                return !!(data.step12Text || data.step12Recording);
             default:
                 return true;
         }
@@ -444,8 +531,8 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                             onClick={handleNext}
                             disabled={!stepIsValid}
                             className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold transition-all shadow-lg ${stepIsValid
-                                    ? 'bg-gradient-to-r from-primary to-emerald-500 text-white hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                ? 'bg-gradient-to-r from-primary to-emerald-500 text-white hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
                         >
                             {step === '10' ? 'Almost Done' : 'Continue'}
@@ -462,8 +549,8 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                             onClick={handleNext}
                             disabled={!stepIsValid}
                             className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-lg transition-all ${stepIsValid
-                                    ? 'bg-gradient-to-r from-primary to-emerald-500 text-white shadow-lg active:scale-[0.98]'
-                                    : 'bg-gray-200 text-gray-400'
+                                ? 'bg-gradient-to-r from-primary to-emerald-500 text-white shadow-lg active:scale-[0.98]'
+                                : 'bg-gray-200 text-gray-400'
                                 }`}
                         >
                             {step === '10' ? 'Almost Done' : 'Continue'}

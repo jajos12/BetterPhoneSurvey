@@ -1,6 +1,6 @@
 // Survey type definitions
 
-export type PainCheckValue = 'yes' | 'sometimes' | 'no';
+export type PainCheckValue = 'crisis' | 'yes' | 'sometimes' | 'no';
 
 export interface SurveyFormData {
     // Pain check
@@ -37,10 +37,16 @@ export interface SurveyFormData {
     familyStructure: string;
     householdIncome: string;
 
-    // Step 9: Click motivation
+    // Step 9: Advice sources
+    adviceSources?: string[];
+
+    // Step 10: Price willingness
+    priceWillingness?: string;
+
+    // Step 11: Click motivation
     clickMotivation: string;
 
-    // Step 10: Anything else
+    // Step 12: Anything else
     anythingElse: string;
 
     // Email
@@ -75,7 +81,7 @@ export interface VoiceRecording {
 export interface StepConfig {
     id: string;
     path: string;
-    type: 'gate' | 'voice' | 'checkbox' | 'ranking' | 'form' | 'text' | 'email' | 'thank-you';
+    type: 'gate' | 'voice' | 'checkbox' | 'ranking' | 'form' | 'text' | 'choice' | 'email' | 'thank-you';
     title: string;
     description?: string;
     hasVoice?: boolean;

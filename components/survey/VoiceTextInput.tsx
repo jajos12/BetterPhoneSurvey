@@ -8,6 +8,7 @@ interface VoiceTextInputProps {
     sessionId: string;
     stepNumber: number;
     placeholder?: string;
+    voiceOnly?: boolean;
 }
 
 type RecordingState = 'idle' | 'recording' | 'saved';
@@ -15,7 +16,8 @@ type RecordingState = 'idle' | 'recording' | 'saved';
 export function VoiceTextInput({
     sessionId,
     stepNumber,
-    placeholder = 'Type your thoughts here...'
+    placeholder = 'Type your thoughts here...',
+    voiceOnly = false
 }: VoiceTextInputProps) {
     const { updateFormData, formData } = useSurvey();
 
@@ -157,25 +159,41 @@ export function VoiceTextInput({
     return (
         <div className="space-y-4">
             {/* Text input option */}
-            <div>
-                <textarea
-                    className="w-full min-h-[120px] p-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-900 placeholder-gray-400 resize-y focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-base leading-relaxed"
-                    placeholder={placeholder}
-                    value={text}
-                    onChange={(e) => handleTextChange(e.target.value)}
-                    disabled={recordingState === 'recording'}
-                />
-            </div>
+            {!voiceOnly && (
+                <>
+                    <div>
+                        <textarea
+                            className="w-full min-h-[120px] p-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-900 placeholder-gray-400 resize-y focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-base leading-relaxed"
+                            placeholder={placeholder}
+                            value={text}
+                            onChange={(e) => handleTextChange(e.target.value)}
+                            disabled={recordingState === 'recording'}
+                        />
+                    </div>
 
-            {/* OR divider */}
-            <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-gray-200"></div>
-                <span className="text-sm text-gray-400 font-medium">or record a voice memo</span>
-                <div className="flex-1 h-px bg-gray-200"></div>
-            </div>
+                    {/* OR divider */}
+                    <div className="flex items-center gap-4">
+                        <div className="flex-1 h-px bg-gray-200"></div>
+                        <span className="text-sm text-gray-400 font-medium">or record a voice memo</span>
+                        <div className="flex-1 h-px bg-gray-200"></div>
+                    </div>
+                </>
+            )}
 
             {/* Voice recording option - SEPARATE from text box */}
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-4">
+                {voiceOnly && recordingState === 'idle' && (
+                    <p className="text-sm text-text-secondary text-center px-4 italic">
+                        {placeholder}
+                    </p>
+                )}
+
+                {recordingState === 'recording' && (
+                    <p className="text-sm font-medium text-primary animate-pulse text-center px-4">
+                        Recording... {placeholder}
+                    </p>
+                )}
+
                 {recordingState === 'idle' && (
                     <button
                         type="button"
@@ -216,20 +234,22 @@ export function VoiceTextInput({
                 )}
 
                 {recordingState === 'saved' && (
-                    <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-green-50 border-2 border-green-200">
-                        <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <div className="text-left">
-                            <p className="font-semibold text-green-700">Saved!</p>
-                            <button
-                                onClick={resetRecording}
-                                className="text-sm text-green-600 hover:text-green-800 underline"
-                            >
-                                Record again
-                            </button>
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-green-50 border-2 border-green-200">
+                            <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div className="text-left">
+                                <p className="font-semibold text-green-700">Saved!</p>
+                                <button
+                                    onClick={resetRecording}
+                                    className="text-sm text-green-600 hover:text-green-800 underline"
+                                >
+                                    Record again
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

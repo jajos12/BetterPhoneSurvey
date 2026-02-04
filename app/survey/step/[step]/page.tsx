@@ -180,7 +180,7 @@ function Step7Content() {
 }
 
 function Step8Content() {
-    const { formData, updateFormData } = useSurvey();
+    const { sessionId, formData, updateFormData } = useSurvey();
 
     return (
         <>
@@ -188,71 +188,90 @@ function Step8Content() {
                 Help us understand your family&apos;s situation:
             </p>
 
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block font-medium mb-2 text-sm">Ages of your children</label>
-                        <input
-                            type="text"
-                            className="input-base"
-                            placeholder="e.g., 8, 12, 15"
-                            value={formData.kidAges || ''}
-                            onChange={(e) => updateFormData({ kidAges: e.target.value })}
-                        />
-                    </div>
+            <div className="space-y-6">
+                {/* Voice Option First (Lazy mode) */}
+                <div className="bg-primary/5 p-5 rounded-2xl border-2 border-primary/10">
+                    <p className="text-sm font-bold text-primary mb-3 flex items-center gap-2">
+                        <span>🎙️</span> Answer via Voice (Easier)
+                    </p>
+                    <VoiceTextInput sessionId={sessionId} stepNumber={8} voiceOnly={true} placeholder="Tell us about your kids' ages, their devices, and how long they've had them..." />
+                </div>
 
-                    <div>
-                        <label className="block font-medium mb-2 text-sm">How many have their own phone?</label>
-                        <input
-                            type="text"
-                            className="input-base"
-                            placeholder="e.g., 2"
-                            value={formData.kidsWithPhones || ''}
-                            onChange={(e) => updateFormData({ kidsWithPhones: e.target.value })}
-                        />
+                <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-100"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase tracking-widest text-text-muted">
+                        <span className="bg-white px-4">Or fill out the form</span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block font-medium mb-2 text-sm">Current phone/device they use</label>
-                        <input
-                            type="text"
-                            className="input-base"
-                            placeholder="e.g., iPhone 12"
-                            value={formData.currentDevice || ''}
-                            onChange={(e) => updateFormData({ currentDevice: e.target.value })}
-                        />
+                <div className="space-y-4 opacity-80">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block font-medium mb-2 text-sm text-text-secondary">Ages of your children</label>
+                            <input
+                                type="text"
+                                className="input-base"
+                                placeholder="e.g., 8, 12, 15"
+                                value={formData.kidAges || ''}
+                                onChange={(e) => updateFormData({ kidAges: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block font-medium mb-2 text-sm text-text-secondary">How many have their own phone?</label>
+                            <input
+                                type="text"
+                                className="input-base"
+                                placeholder="e.g., 2"
+                                value={formData.kidsWithPhones || ''}
+                                onChange={(e) => updateFormData({ kidsWithPhones: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block font-medium mb-2 text-sm text-text-secondary">Current phone/device they use</label>
+                            <input
+                                type="text"
+                                className="input-base"
+                                placeholder="e.g., iPhone 12"
+                                value={formData.currentDevice || ''}
+                                onChange={(e) => updateFormData({ currentDevice: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block font-medium mb-2 text-sm text-text-secondary">How long have they had it?</label>
+                            <input
+                                type="text"
+                                className="input-base"
+                                placeholder="e.g., 2 years"
+                                value={formData.deviceDuration || ''}
+                                onChange={(e) => updateFormData({ deviceDuration: e.target.value })}
+                            />
+                        </div>
                     </div>
 
                     <div>
-                        <label className="block font-medium mb-2 text-sm">How long have they had it?</label>
-                        <input
-                            type="text"
-                            className="input-base"
-                            placeholder="e.g., 2 years"
-                            value={formData.deviceDuration || ''}
-                            onChange={(e) => updateFormData({ deviceDuration: e.target.value })}
-                        />
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block font-medium mb-2 text-sm text-gray-700 font-semibold mb-3">Household Income (Optional)</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {INCOME_OPTIONS.map((opt) => (
-                            <button
-                                type="button"
-                                key={opt.value}
-                                onClick={() => updateFormData({ householdIncome: opt.value })}
-                                className={`px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border-2 ${formData.householdIncome === opt.value
-                                    ? 'bg-primary border-primary text-white shadow-md'
-                                    : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
-                                    }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
+                        <label className="block font-medium mb-2 text-sm text-text-secondary font-semibold mb-3">Household Income (Optional)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {INCOME_OPTIONS.map((opt) => (
+                                <button
+                                    type="button"
+                                    key={opt.value}
+                                    onClick={() => updateFormData({ householdIncome: opt.value })}
+                                    className={`px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border-2 ${formData.householdIncome === opt.value
+                                        ? 'bg-primary border-primary text-white shadow-md'
+                                        : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200 shadow-sm'
+                                        }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -324,7 +343,7 @@ function Step11Content() {
     return (
         <>
             <p className="text-text-secondary mb-6">
-                What made you want to take this survey today?
+                What made you want to take this survey today? <strong>Was there anything that caused you resistance to clicking, or made you almost not click?</strong>
             </p>
 
             <VoiceTextInput sessionId={sessionId} stepNumber={11} placeholder="Share what brought you here..." />
@@ -432,7 +451,9 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
             case '7':
                 return (formData.benefits?.length || 0) > 0;
             case '8':
-                return !!(formData.kidAges && formData.kidsWithPhones && formData.currentDevice && formData.deviceDuration);
+                const isFormFilled = !!(formData.kidAges && formData.kidsWithPhones && formData.currentDevice && formData.deviceDuration);
+                const isVoiceAnswered = !!(data.step8Text || data.step8Recording);
+                return isFormFilled || isVoiceAnswered;
             case '9':
                 return (formData.adviceSources?.length || 0) > 0;
             case '10':
@@ -489,7 +510,7 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                 <div className="stagger-children">
                     {/* Step indicator */}
                     <span className="inline-block text-xs font-semibold uppercase tracking-widest text-accent mb-3">
-                        Step {step} of 10
+                        Step {step} of 12
                     </span>
 
                     {/* Title */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface DraggableRankingProps {
     items: { value: string; label: string }[];
@@ -14,11 +14,9 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
     const [touchDragging, setTouchDragging] = useState<number | null>(null);
     const [touchOffset, setTouchOffset] = useState<number>(0);
 
-    const dragNode = useRef<HTMLDivElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
     const touchStartY = useRef<number>(0);
-    const initialY = useRef<number>(0);
 
     // Create ordered list
     const orderedItems = (() => {
@@ -29,30 +27,29 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
         return [...fromValue, ...remainingItems];
     })();
 
-    // Desktop drag handlers
+    // Desktop Drag Handlers (Standard)
     const handleDragStart = (e: React.DragEvent, item: string) => {
         setDragging(item);
-        dragNode.current = e.target as HTMLDivElement;
+        e.dataTransfer.setData('text/plain', item);
         setTimeout(() => {
-            if (dragNode.current) {
-                dragNode.current.style.opacity = '0.5';
-            }
+            const target = e.target as HTMLElement;
+            target.style.opacity = '0.4';
         }, 0);
     };
 
-    const handleDragEnd = () => {
-        if (dragNode.current) {
-            dragNode.current.style.opacity = '1';
-        }
+    const handleDragEnd = (e: React.DragEvent) => {
+        const target = e.target as HTMLElement;
+        target.style.opacity = '1';
         setDragging(null);
         setDragOver(null);
-        dragNode.current = null;
     };
 
     const handleDragOver = (e: React.DragEvent, index: number) => {
         e.preventDefault();
         if (dragging === null) return;
-        setDragOver(index);
+        if (dragOver !== index) {
+            setDragOver(index);
+        }
     };
 
     const handleDrop = (e: React.DragEvent, dropIndex: number) => {
@@ -75,20 +72,15 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
         setDragOver(null);
     };
 
-    // Touch drag handlers - FOLLOW FINGER
+    // Touch Drag Handlers - SMOOTH SHIFT
     const handleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
         const touch = e.touches[0];
-        const target = e.currentTarget as HTMLDivElement;
-        const rect = target.getBoundingClientRect();
-
         touchStartY.current = touch.clientY;
-        initialY.current = rect.top;
 
         setTouchDragging(index);
         setDragOver(index);
         setTouchOffset(0);
 
-        // Haptic feedback
         if (navigator.vibrate) {
             navigator.vibrate(15);
         }
@@ -96,29 +88,41 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
 
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
         if (touchDragging === null) return;
+
+        // Prevent scroll while dragging
         e.preventDefault();
 
         const touch = e.touches[0];
         const deltaY = touch.clientY - touchStartY.current;
+        const touchY = touch.clientY;
         setTouchOffset(deltaY);
 
-        // Find which slot we're over
-        let newDragOver = touchDragging;
-        itemRefs.current.forEach((ref, index) => {
-            if (ref && index !== touchDragging) {
-                const rect = ref.getBoundingClientRect();
-                const middle = rect.top + rect.height / 2;
+        // Find which slot we're over using direct hit-test
+        let targetIndex = dragOver;
 
-                if (touch.clientY < middle && index < touchDragging!) {
-                    newDragOver = index;
-                } else if (touch.clientY > middle && index > touchDragging!) {
-                    newDragOver = index;
+        // Quick boundary checks
+        const firstRect = itemRefs.current[0]?.getBoundingClientRect();
+        const lastRect = itemRefs.current[itemRefs.current.length - 1]?.getBoundingClientRect();
+
+        if (firstRect && touchY < firstRect.top) {
+            targetIndex = 0;
+        } else if (lastRect && touchY > lastRect.bottom) {
+            targetIndex = itemRefs.current.length - 1;
+        } else {
+            for (let i = 0; i < itemRefs.current.length; i++) {
+                const ref = itemRefs.current[i];
+                if (ref) {
+                    const rect = ref.getBoundingClientRect();
+                    if (touchY >= rect.top && touchY <= rect.bottom) {
+                        targetIndex = i;
+                        break;
+                    }
                 }
             }
-        });
+        }
 
-        if (newDragOver !== dragOver) {
-            setDragOver(newDragOver);
+        if (targetIndex !== null && targetIndex !== dragOver) {
+            setDragOver(targetIndex);
             if (navigator.vibrate) {
                 navigator.vibrate(5);
             }
@@ -140,42 +144,55 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
     }, [touchDragging, dragOver, orderedItems, onChange]);
 
     return (
-        <div ref={containerRef} className="space-y-2">
-            {/* Mobile instruction */}
-            <p className="text-xs text-gray-500 text-center sm:hidden mb-3">
-                Hold and drag to reorder
+        <div ref={containerRef} className="space-y-3 py-2">
+            <p className="text-xs text-text-muted text-center sm:hidden mb-2">
+                Hold and drag items to reorder
             </p>
 
             {orderedItems.map((item, index) => {
-                const isDraggingThis = touchDragging === index;
-                const isDropTarget = dragOver === index && touchDragging !== null && touchDragging !== index;
+                const isDragging = touchDragging === index;
+                const isOtherItem = touchDragging !== null && !isDragging;
+
+                let translateY = 0;
+
+                // Calculate "Shift" for other items
+                if (isOtherItem && dragOver !== null && touchDragging !== null) {
+                    const itemHeight = 60; // Approximate height + gap
+
+                    if (index > touchDragging && index <= dragOver) {
+                        // Dragging down: items between start and end shift UP
+                        translateY = -itemHeight;
+                    } else if (index < touchDragging && index >= dragOver) {
+                        // Dragging up: items between end and start shift DOWN
+                        translateY = itemHeight;
+                    }
+                }
 
                 return (
                     <div
                         key={item.value}
-                        className="flex items-stretch gap-2"
+                        ref={(el) => { itemRefs.current[index] = el; }}
                         style={{
-                            transition: isDraggingThis ? 'none' : 'transform 0.15s ease-out',
-                            transform: isDraggingThis
-                                ? `translateY(${touchOffset}px) scale(1.02)`
-                                : isDropTarget
-                                    ? 'scale(1.02)'
-                                    : 'none',
-                            zIndex: isDraggingThis ? 50 : 'auto',
+                            transform: isDragging
+                                ? `translateY(${touchOffset}px) scale(1.04)`
+                                : `translateY(${translateY}px)`,
+                            zIndex: isDragging ? 50 : 0,
+                            transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.2, 0, 0, 1)',
                             position: 'relative',
+                            touchAction: 'none'
                         }}
+                        className={`group flex items-stretch gap-3 ${isDragging ? 'pointer-events-none' : ''}`}
                     >
                         {/* Rank number */}
-                        <div className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center font-bold transition-all ${isDropTarget
-                                ? 'bg-primary text-white'
-                                : 'bg-gray-100 text-gray-600'
+                        <div className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center font-bold transition-all duration-300 ${isDragging
+                            ? 'bg-primary text-white shadow-lg'
+                            : 'bg-gray-100 text-gray-500'
                             }`}>
                             {index + 1}
                         </div>
 
                         {/* Draggable item */}
                         <div
-                            ref={(el) => { itemRefs.current[index] = el; }}
                             draggable
                             onDragStart={(e) => handleDragStart(e, item.value)}
                             onDragEnd={handleDragEnd}
@@ -184,31 +201,33 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
                             onTouchStart={(e) => handleTouchStart(e, index)}
                             onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
-                            className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all cursor-grab active:cursor-grabbing select-none ${isDraggingThis
-                                    ? 'bg-white border-primary shadow-xl'
-                                    : isDropTarget
-                                        ? 'bg-primary/5 border-primary'
-                                        : 'bg-white border-gray-200 hover:border-gray-300'
+                            className={`flex-1 flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 transition-all duration-300 cursor-grab active:cursor-grabbing select-none ${isDragging
+                                ? 'bg-white border-primary shadow-2xl ring-4 ring-primary/5'
+                                : dragOver === index && dragging !== null
+                                    ? 'bg-primary/5 border-primary ring-2 ring-primary/10'
+                                    : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-md'
                                 }`}
-                            style={{ touchAction: 'none' }}
                         >
                             {/* Drag handle */}
-                            <div className="text-gray-400">
+                            <div className={`transition-colors ${isDragging ? 'text-primary' : 'text-gray-300 group-hover:text-gray-400'}`}>
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm6 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 2zM7 8a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm6 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zM7 14a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
                                 </svg>
                             </div>
 
                             {/* Label */}
-                            <span className="text-gray-800 font-medium flex-1">{item.label}</span>
+                            <span className={`text-base font-semibold flex-1 transition-colors ${isDragging ? 'text-primary' : 'text-text-primary'
+                                }`}>
+                                {item.label}
+                            </span>
                         </div>
                     </div>
                 );
             })}
 
             {orderedItems.length === 0 && (
-                <p className="text-gray-500 text-center py-8">
-                    No items to rank.
+                <p className="text-text-muted text-center py-10 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                    No items selected to rank.
                 </p>
             )}
         </div>

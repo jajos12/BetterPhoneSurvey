@@ -68,6 +68,7 @@ export const STEPS: StepConfig[] = [
         type: 'form',
         title: 'Tell us about your family',
         description: "Help us understand your family's situation.",
+        hasVoice: true,
     },
     {
         id: '9',
@@ -150,10 +151,11 @@ export const ADVICE_SOURCES_OPTIONS = [
 ];
 
 export const PRICE_WILLINGNESS_OPTIONS = [
-    { value: '100-200', label: '$100 - $200' },
-    { value: '200-300', label: '$200 - $300' },
-    { value: '300-400', label: '$300 - $400' },
-    { value: '400-plus', label: '$400+' },
+    { value: '1000-plus', label: '$1,000+' },
+    { value: '750-1000', label: '$750 - $1,000' },
+    { value: '500-750', label: '$500 - $750' },
+    { value: '250-500', label: '$250 - $500' },
+    { value: 'under-250', label: '$250 or below' },
 ];
 
 export const INCOME_OPTIONS = [

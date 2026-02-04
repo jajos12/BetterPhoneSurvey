@@ -10,14 +10,14 @@ import { useSurvey } from '@/components/providers/SurveyProvider';
 export default function EmailPage() {
     const router = useRouter();
     const { sessionId, formData, updateFormData } = useSurvey();
-    const [optIn, setOptIn] = useState(formData.emailOptIn || false);
     const [email, setEmail] = useState(formData.email || '');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async () => {
         setIsSubmitting(true);
 
-        updateFormData({ emailOptIn: optIn, email: optIn ? email : '' });
+        const hasEmail = email.trim().length > 0;
+        updateFormData({ emailOptIn: hasEmail, email: email });
 
         try {
             const response = await fetch('/api/save', {
@@ -26,8 +26,8 @@ export default function EmailPage() {
                 body: JSON.stringify({
                     sessionId,
                     ...formData,
-                    emailOptIn: optIn,
-                    email: optIn ? email : '',
+                    emailOptIn: hasEmail,
+                    email: email,
                     isCompleted: true,
                 }),
             });
@@ -64,50 +64,35 @@ export default function EmailPage() {
                         you&apos;ve been waiting for. No spam, just meaningful updates.
                     </p>
 
-                    {/* Opt-in checkbox with premium styling */}
-                    <div className="space-y-6 mb-8">
-                        <label className="flex items-start gap-4 cursor-pointer p-4 rounded-2xl bg-white/50 border-2 border-transparent hover:border-accent/30 transition-all duration-300">
+                    {/* Email Input */}
+                    <div className="space-y-4 mb-8">
+                        <div>
+                            <label className="flex items-center justify-between mb-2">
+                                <span className="font-medium text-text-secondary">Your email address</span>
+                                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted bg-gray-100 px-2 py-0.5 rounded-lg">Optional</span>
+                            </label>
                             <input
-                                type="checkbox"
-                                checked={optIn}
-                                onChange={(e) => setOptIn(e.target.checked)}
-                                className="mt-1 w-6 h-6 cursor-pointer accent-accent rounded"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="your@email.com"
+                                className="input-base"
                             />
-                            <div>
-                                <span className="text-text-primary font-medium block">
-                                    Yes, keep me updated on your progress
-                                </span>
-                                <span className="text-text-muted text-sm">
-                                    Be the first to know when the phone is ready
-                                </span>
-                            </div>
-                        </label>
-
-                        {optIn && (
-                            <div className="animate-fade-in">
-                                <label className="block font-medium mb-2 text-text-secondary">
-                                    Your email address
-                                </label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="your@email.com"
-                                    className="input-base"
-                                    autoFocus
-                                />
-                            </div>
-                        )}
+                            <p className="text-sm text-text-muted mt-3 italic leading-relaxed">
+                                Join our community of parents building a better future.
+                                We&apos;ll notify you when we&apos;re ready to launch.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 {/* Navigation */}
                 <div className="flex gap-4 mt-auto pt-8">
-                    <Button variant="secondary" onClick={() => router.push('/survey/step/10')}>
+                    <Button variant="secondary" onClick={() => router.push('/survey/step/12')}>
                         Back
                     </Button>
                     <div className="flex-1" />
-                    <Button onClick={handleSubmit} disabled={isSubmitting || (optIn && !email)}>
+                    <Button onClick={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? (
                             <span className="flex items-center gap-2">
                                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

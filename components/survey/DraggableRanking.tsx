@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 
 interface DraggableRankingProps {
     items: { value: string; label: string }[];
@@ -18,28 +18,28 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
     const touchStartY = useRef<number>(0);
 
-    // Create ordered list
-    const orderedItems = (() => {
+    // Create ordered list (Memoized for performance)
+    const orderedItems = useMemo(() => {
         const fromValue = value
             .map(v => items.find(i => i.value === v))
             .filter(Boolean) as { value: string; label: string }[];
         const remainingItems = items.filter(i => !value.includes(i.value));
         return [...fromValue, ...remainingItems];
-    })();
+    }, [items, value]);
 
     // Desktop Drag Handlers (Standard)
     const handleDragStart = (e: React.DragEvent, item: string) => {
         setDragging(item);
         e.dataTransfer.setData('text/plain', item);
         setTimeout(() => {
-            const target = e.target as HTMLElement;
-            target.style.opacity = '0.4';
+            const target = (e.target as HTMLElement).closest('.draggable-item') as HTMLElement;
+            if (target) target.style.opacity = '0.4';
         }, 0);
     };
 
     const handleDragEnd = (e: React.DragEvent) => {
-        const target = e.target as HTMLElement;
-        target.style.opacity = '1';
+        const target = (e.target as HTMLElement).closest('.draggable-item') as HTMLElement;
+        if (target) target.style.opacity = '1';
         setDragging(null);
         setDragOver(null);
     };
@@ -104,7 +104,7 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
         if (touchDragging === null || !containerRef.current) return;
 
         // Prevent scroll while dragging
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
 
         const touch = e.touches[0];
         const touchY = touch.clientY;
@@ -115,20 +115,22 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
         let targetIndex = touchDragging;
 
         // Check boundaries first
-        const first = itemPositions.current[0];
-        const last = itemPositions.current[itemPositions.current.length - 1];
+        if (itemPositions.current.length > 0) {
+            const first = itemPositions.current[0];
+            const last = itemPositions.current[itemPositions.current.length - 1];
 
-        if (touchY < first.top) {
-            targetIndex = 0;
-        } else if (touchY > last.bottom) {
-            targetIndex = itemPositions.current.length - 1;
-        } else {
-            // Find which item we've dragged into based on centers
-            for (let i = 0; i < itemPositions.current.length; i++) {
-                const pos = itemPositions.current[i];
-                if (touchY >= pos.top && touchY <= pos.bottom) {
-                    targetIndex = i;
-                    break;
+            if (touchY < first.top) {
+                targetIndex = 0;
+            } else if (touchY > last.bottom) {
+                targetIndex = itemPositions.current.length - 1;
+            } else {
+                // Find which item we've dragged into based on centers
+                for (let i = 0; i < itemPositions.current.length; i++) {
+                    const pos = itemPositions.current[i];
+                    if (touchY >= pos.top && touchY <= pos.bottom) {
+                        targetIndex = i;
+                        break;
+                    }
                 }
             }
         }
@@ -158,7 +160,7 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
     return (
         <div ref={containerRef} className="space-y-3 py-2">
             <p className="text-xs text-text-muted text-center sm:hidden mb-2">
-                Hold and drag items to reorder
+                Hold and drag the handles <span className="text-primary font-bold">::</span> to reorder
             </p>
 
             {orderedItems.map((item, index) => {
@@ -185,7 +187,6 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
                         key={item.value}
                         ref={(el) => { itemRefs.current[index] = el; }}
                         className="relative flex items-center gap-3"
-                        style={{ touchAction: 'none' }}
                     >
                         {/* Static Rank number */}
                         <div className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center font-bold bg-gray-100 text-gray-400 z-0`}>
@@ -202,29 +203,32 @@ export function DraggableRanking({ items, value, onChange }: DraggableRankingPro
                                 transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
                                 flex: 1
                             }}
-                            className={`group flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 select-none cursor-grab active:cursor-grabbing ${isDragging
+                            className={`draggable-item group flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 select-none ${isDragging
                                 ? 'bg-white border-primary shadow-2xl ring-4 ring-primary/5'
                                 : dragOver === index && dragging !== null
                                     ? 'bg-primary/5 border-primary ring-2 ring-primary/10'
                                     : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-md'
                                 }`}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, item.value)}
-                            onDragEnd={handleDragEnd}
                             onDragOver={(e) => handleDragOver(e, index)}
                             onDrop={(e) => handleDrop(e, index)}
-                            onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
                         >
-                            {/* Drag handle */}
-                            <div className={`transition-colors ${isDragging ? 'text-primary' : 'text-gray-300 group-hover:text-gray-400'}`}>
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            {/* Drag handle - NOW THE ONLY DRAG TARGET */}
+                            <div
+                                className={`cursor-grab active:cursor-grabbing p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors ${isDragging ? 'text-primary' : 'text-gray-300 group-hover:text-gray-400'}`}
+                                style={{ touchAction: 'none' }}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, item.value)}
+                                onDragEnd={handleDragEnd}
+                                onTouchStart={(e) => handleTouchStart(e, index)}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                            >
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm6 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 2zM7 8a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm6 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zM7 14a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
                                 </svg>
                             </div>
 
-                            {/* Label */}
+                            {/* Label - SCROLLABLE NOW */}
                             <span className={`text-base font-semibold flex-1 transition-colors ${isDragging ? 'text-primary' : 'text-text-primary'}`}>
                                 {item.label}
                             </span>

@@ -434,6 +434,14 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         }
     }, [step]);
 
+    // Optimistic Prefetching
+    useEffect(() => {
+        const next = getNextStep(step);
+        if (next) {
+            router.prefetch(next.path);
+        }
+    }, [step, router]);
+
     if (!stepConfig || !StepContent) {
         return (
             <GlassCard className="text-center">

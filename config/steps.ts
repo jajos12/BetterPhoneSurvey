@@ -51,8 +51,8 @@ export const STEPS: StepConfig[] = [
         id: '6',
         path: '/survey/step/6',
         type: 'voice',
-        title: 'What would make switching hard?',
-        description: 'If you switched your kid to a different phone, what would happen?',
+        title: 'Switching Concerns & Motivation',
+        description: 'What would make switching hard? And what would make you willing to switch TODAY?',
         hasVoice: true,
     },
     {
@@ -68,17 +68,32 @@ export const STEPS: StepConfig[] = [
         type: 'form',
         title: 'Tell us about your family',
         description: "Help us understand your family's situation.",
+        hasVoice: true,
     },
     {
         id: '9',
         path: '/survey/step/9',
-        type: 'text',
-        title: 'Why did you click on this survey?',
-        description: 'What made you want to take this survey today?',
+        type: 'checkbox',
+        title: 'Where do you look for parenting advice?',
+        description: 'Select all the places where you look for advice online.',
     },
     {
         id: '10',
         path: '/survey/step/10',
+        type: 'checkbox',
+        title: 'Price Willingness',
+        description: 'Select all the price ranges you would be willing to pay if this phone solved your child’s device problems.',
+    },
+    {
+        id: '11',
+        path: '/survey/step/11',
+        type: 'text',
+        title: 'Why did you click?',
+        description: 'Was there anything that made you almost not click?',
+    },
+    {
+        id: '12',
+        path: '/survey/step/12',
         type: 'text',
         title: 'Anything else?',
         description: "Is there anything else you'd like us to know?",
@@ -122,6 +137,33 @@ export const BENEFITS_OPTIONS = [
     { value: 'no-social', label: 'No social media' },
     { value: 'parental-control', label: 'Strong parental controls' },
     { value: 'durable', label: 'Durable design for kids' },
+];
+
+export const ADVICE_SOURCES_OPTIONS = [
+    { value: 'facebook', label: 'Facebook Groups' },
+    { value: 'reddit', label: 'Reddit (r/parenting, etc.)' },
+    { value: 'instagram', label: 'Instagram' },
+    { value: 'pediatrician', label: 'Pediatrician' },
+    { value: 'friends', label: 'Friends/Family' },
+    { value: 'blogs', label: 'Parenting Blogs' },
+    { value: 'youtube', label: 'YouTube' },
+    { value: 'other', label: 'Other' },
+];
+
+export const PRICE_WILLINGNESS_OPTIONS = [
+    { value: '1000-plus', label: '$1,000+' },
+    { value: '750-1000', label: '$750 - $1,000' },
+    { value: '500-750', label: '$500 - $750' },
+    { value: '250-500', label: '$250 - $500' },
+    { value: 'under-250', label: '$250 or below' },
+];
+
+export const INCOME_OPTIONS = [
+    { value: 'under-50k', label: 'Under $50k' },
+    { value: '50k-100k', label: '$50k - $100k' },
+    { value: '100k-150k', label: '$100k - $150k' },
+    { value: '150k-250k', label: '$150k - $250k' },
+    { value: '250k-plus', label: '$250k+' },
 ];
 
 export function getStepIndex(stepId: string): number {

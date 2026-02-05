@@ -10,7 +10,8 @@ import { useSurvey } from '@/components/providers/SurveyProvider';
 import type { PainCheckValue } from '@/types/survey';
 
 const options = [
-    { value: 'yes', label: 'Yes, this is a regular source of stress and problems in our family' },
+    { value: 'crisis', label: 'Crisis Level - I need a solution immediately' },
+    { value: 'yes', label: 'Yes, this is a regular source of stress and problems' },
     { value: 'sometimes', label: 'Sometimes' },
     { value: 'no', label: 'No' },
 ];

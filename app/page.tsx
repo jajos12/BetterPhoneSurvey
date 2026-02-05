@@ -21,6 +21,12 @@ export default function HomePage() {
                 Help Us Build a Better Phone for Kids
               </h1>
 
+              {/* Reward badge */}
+              <div className="inline-flex items-center gap-2 text-primary font-bold mb-6 bg-primary/5 px-6 py-3 rounded-2xl border-2 border-primary/20 shadow-sm">
+                <span className="text-xl">🎁</span>
+                <span>Complete the survey for a $100 BetterPhone Gift Card</span>
+              </div>
+
               {/* Empathetic intro */}
               <p className="text-text-secondary text-base sm:text-lg mb-3 sm:mb-4 leading-relaxed">
                 We&apos;re a group of parents and child development researchers working
@@ -40,7 +46,7 @@ export default function HomePage() {
                 </div>
                 <div className="trust-badge">
                   <span>⏱️</span>
-                  <span>~10 min</span>
+                  <span>~4 min</span>
                 </div>
                 <div className="trust-badge">
                   <span>🔐</span>

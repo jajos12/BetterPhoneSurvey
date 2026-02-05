@@ -13,6 +13,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Capture IP for location data (Production vs Local)
+        const forwarded = request.headers.get('x-forwarded-for');
+        const realIp = request.headers.get('x-real-ip');
+        const ip = (forwarded ? forwarded.split(',')[0] : realIp) || '127.0.0.1';
+
+        // Add IP to formData
+        formData.ipAddress = ip;
+
         // Validate email format if provided
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const validEmail = formData.email && emailRegex.test(formData.email) ? formData.email : null;

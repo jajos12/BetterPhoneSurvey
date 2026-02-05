@@ -27,7 +27,7 @@ export default function PainCheckPage() {
         if (selected === 'no') {
             router.push('/survey/not-a-fit');
         } else {
-            router.push('/survey/step/1');
+            router.push('/survey/email');
         }
     };
 

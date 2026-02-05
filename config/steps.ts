@@ -10,6 +10,13 @@ export const STEPS: StepConfig[] = [
         description: "We need to make sure this survey is right for you.",
     },
     {
+        id: 'email',
+        path: '/survey/email',
+        type: 'email',
+        title: 'Claim Your $100 Reward',
+        description: "Where should we send your BetterPhone Gift Card?",
+    },
+    {
         id: '1',
         path: '/survey/step/1',
         type: 'voice',
@@ -97,13 +104,6 @@ export const STEPS: StepConfig[] = [
         type: 'text',
         title: 'Anything else?',
         description: "Is there anything else you'd like us to know?",
-    },
-    {
-        id: 'email',
-        path: '/survey/email',
-        type: 'email',
-        title: 'Stay connected',
-        description: "We'd love to keep you updated on our progress.",
     },
     {
         id: 'thank-you',

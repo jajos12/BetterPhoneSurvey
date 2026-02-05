@@ -44,7 +44,8 @@ export default function EmailPage() {
                     ...formData,
                     emailOptIn: optIn,
                     email: email,
-                    isCompleted: true,
+                    isCompleted: false, // Not completed yet!
+                    currentStep: 'email'
                 }),
             });
 
@@ -55,7 +56,7 @@ export default function EmailPage() {
             console.error('Save failed:', error);
         }
 
-        router.push('/survey/thank-you');
+        router.push('/survey/step/1');
     };
 
     return (
@@ -138,7 +139,7 @@ export default function EmailPage() {
 
                 {/* Navigation */}
                 <div className="flex gap-4 mt-auto pt-8">
-                    <Button variant="secondary" onClick={() => router.push('/survey/step/12')}>
+                    <Button variant="secondary" onClick={() => router.push('/survey/pain-check')}>
                         Back
                     </Button>
                     <div className="flex-1" />

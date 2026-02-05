@@ -359,7 +359,7 @@ function Step11Content() {
                 What made you want to take this survey today? <strong>Was there anything that caused you resistance to clicking?</strong>
             </p>
 
-            <VoiceTextInput sessionId={sessionId} stepNumber={11} placeholder="You can type your response here..." />
+            <VoiceTextInput sessionId={sessionId} stepNumber={11} placeholder="You can type your response here" />
         </>
     );
 }
@@ -500,13 +500,17 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                     sessionId,
                     ...formData,
                     currentStep: next?.id || step,
-                    isCompleted: step === '10',
+                    isCompleted: step === '12',
                 }),
             }).catch(err => console.error('Failed to save:', err));
         }
     };
 
     const handleBack = () => {
+        if (step === '1') {
+            router.push('/survey/email');
+            return;
+        }
         const prev = getPrevStep(step);
         if (prev) {
             router.push(prev.path);
@@ -569,7 +573,7 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
                         >
-                            {step === '10' ? 'Almost Done' : 'Continue'}
+                            {step === '12' ? 'Complete Survey' : 'Continue'}
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                             </svg>
@@ -587,7 +591,7 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
                                 : 'bg-gray-200 text-gray-400'
                                 }`}
                         >
-                            {step === '10' ? 'Almost Done' : 'Continue'}
+                            {step === '12' ? 'Complete Survey' : 'Continue'}
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                             </svg>

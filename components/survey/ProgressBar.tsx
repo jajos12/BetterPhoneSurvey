@@ -13,15 +13,17 @@ export function ProgressBar({ currentStepId }: ProgressBarProps) {
     // Warm, encouraging status messages
     const getStatusMessage = () => {
         if (currentStepId === 'pain-check') return 'Just a quick check...';
-        if (currentStepId === 'email') return 'Almost finished!';
+        if (currentStepId === 'email') return 'Claiming your reward...';
         if (currentStepId === 'thank-you') return '✨ Thank you!';
 
-        const mainStepCount = 12; // Update this as steps grow
-        if (currentIndex > 0 && currentIndex <= mainStepCount) {
-            const remaining = mainStepCount - currentIndex;
-            if (remaining <= 2) return `Almost there! Step ${currentStepId} of ${mainStepCount}`;
-            if (remaining <= 6) return `Great progress! Step ${currentStepId} of ${mainStepCount}`;
-            return `Step ${currentStepId} of ${mainStepCount}`;
+        const stepNum = parseInt(currentStepId);
+        const mainStepCount = 12;
+
+        if (!isNaN(stepNum)) {
+            const remaining = mainStepCount - stepNum;
+            if (remaining <= 2) return `Almost there! Step ${stepNum} of ${mainStepCount}`;
+            if (remaining <= 6) return `Great progress! Step ${stepNum} of ${mainStepCount}`;
+            return `Step ${stepNum} of ${mainStepCount}`;
         }
         return 'Your journey begins...';
     };
@@ -47,10 +49,10 @@ export function ProgressBar({ currentStepId }: ProgressBarProps) {
                     <div
                         key={i}
                         className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i < currentIndex
-                                ? 'bg-primary scale-100'
-                                : i === currentIndex - 1
-                                    ? 'bg-primary-light scale-125 shadow-[0_0_8px_rgba(25,118,210,0.3)]'
-                                    : 'bg-gray-200 scale-75'
+                            ? 'bg-primary scale-100'
+                            : i === currentIndex - 1
+                                ? 'bg-primary-light scale-125 shadow-[0_0_8px_rgba(25,118,210,0.3)]'
+                                : 'bg-gray-200 scale-75'
                             }`}
                     />
                 ))}

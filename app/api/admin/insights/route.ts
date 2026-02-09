@@ -212,8 +212,9 @@ ${context}`,
     const insights = JSON.parse(completion.choices[0].message.content || '{}');
     insights.generatedAt = new Date().toISOString();
 
-    // Cache the results (1 hour expiry)
-    await supabaseAdmin
+    // Cache the results (1 hour expiry) with error handling
+    console.log('[Global Insights] Attempting to cache insights for', responses.length, 'responses');
+    const { data: cacheData, error: cacheError } = await supabaseAdmin
       .from('ai_insights_cache')
       .upsert({
         insight_type: 'global_insights',
@@ -221,7 +222,22 @@ ${context}`,
         generated_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         response_count: responses.length,
-      }, { onConflict: 'insight_type' });
+      }, { onConflict: 'insight_type' })
+      .select();
+
+    if (cacheError) {
+      console.error('[Global Insights] Failed to save cache:', cacheError);
+      console.error('[Global Insights] Error details:', JSON.stringify(cacheError));
+      // Don't throw - return insights anyway, just warn about cache failure
+      return NextResponse.json({
+        insights,
+        cached: false,
+        responseCount: responses.length,
+        cacheWarning: 'Insights generated but not cached: ' + cacheError.message
+      });
+    }
+
+    console.log('[Global Insights] Successfully cached to database');
 
     return NextResponse.json({ insights, cached: false, responseCount: responses.length });
   } catch (error) {

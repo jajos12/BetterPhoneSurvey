@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_notes_response ON admin_notes(response_id);
 -- AI insights cache
 CREATE TABLE IF NOT EXISTS ai_insights_cache (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  insight_type TEXT NOT NULL,
+  insight_type TEXT NOT NULL UNIQUE, -- UNIQUE constraint required for upsert
   data JSONB NOT NULL,
   generated_at TIMESTAMPTZ DEFAULT NOW(),
   expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '1 hour',

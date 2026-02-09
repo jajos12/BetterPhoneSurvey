@@ -83,14 +83,28 @@ ${context}`
     const aiSummary = JSON.parse(completion.choices[0].message.content || '{}');
     aiSummary.generatedAt = new Date().toISOString();
 
-    // Save to database
-    await supabaseAdmin
+    // Save to database with error handling
+    console.log('[AI Summary] Attempting to save for response ID:', response.id);
+    const { data: updateData, error: updateError } = await supabaseAdmin
       .from('survey_responses')
       .update({
         ai_summary: aiSummary,
         ai_summary_generated_at: aiSummary.generatedAt,
       })
-      .eq('id', response.id);
+      .eq('id', response.id)
+      .select(); // Return the updated row to verify
+
+    if (updateError) {
+      console.error('[AI Summary] Database update failed:', updateError);
+      throw new Error(`Failed to save AI summary: ${updateError.message}`);
+    }
+
+    if (!updateData || updateData.length === 0) {
+      console.error('[AI Summary] Update returned no data. Response ID might not exist.');
+      throw new Error('Failed to update response - no rows affected');
+    }
+
+    console.log('[AI Summary] Successfully saved to database:', updateData[0].id);
 
     return NextResponse.json({ summary: aiSummary, cached: false });
   } catch (error) {

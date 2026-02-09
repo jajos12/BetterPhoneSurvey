@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { AudioPlayer } from '@/components/admin/AudioPlayer';
 import ActivityTimeline from '@/components/admin/detail/ActivityTimeline';
+import AISummaryCard from '@/components/admin/detail/AISummaryCard';
 
 export const revalidate = 0;
 
@@ -348,6 +349,9 @@ export default async function ResponseDetailPage({
 
                 {/* Voice Intelligence Sidebar */}
                 <div className="space-y-8">
+                    {/* AI Summary - persisted from database */}
+                    <AISummaryCard sessionId={response.session_id} initialSummary={response.ai_summary || null} />
+
                     <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
                         <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 blur-[60px] rounded-full group-hover:bg-purple-600/20 transition-all" />
 

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { AudioPlayer } from '@/components/admin/AudioPlayer';
+import ActivityTimeline from '@/components/admin/detail/ActivityTimeline';
 
 export const revalidate = 0;
 
@@ -54,9 +55,76 @@ async function getResponse(sessionId: string) {
             }
         }));
 
+        // Fetch notes and tags for timeline
+        const [notesResult, tagAssignmentsResult] = await Promise.all([
+            supabaseAdmin
+                .from('admin_notes')
+                .select('created_at')
+                .eq('response_id', response.id)
+                .order('created_at'),
+            supabaseAdmin
+                .from('response_tag_assignments')
+                .select('assigned_at')
+                .eq('response_id', response.id)
+                .order('assigned_at'),
+        ]);
+
+        // Build timeline events
+        const timelineEvents: Array<{ type: string; timestamp: string; details: string }> = [];
+
+        timelineEvents.push({
+            type: 'started',
+            timestamp: response.started_at,
+            details: 'Survey started',
+        });
+
+        for (const rec of recordings || []) {
+            timelineEvents.push({
+                type: 'voice_recorded',
+                timestamp: rec.created_at,
+                details: `Voice recorded at Step ${rec.step_number}`,
+            });
+        }
+
+        if (response.completed_at) {
+            timelineEvents.push({
+                type: 'completed',
+                timestamp: response.completed_at,
+                details: 'Survey completed',
+            });
+        }
+
+        if (response.ai_summary_generated_at) {
+            timelineEvents.push({
+                type: 'ai_analyzed',
+                timestamp: response.ai_summary_generated_at,
+                details: 'AI analysis generated',
+            });
+        }
+
+        for (const note of notesResult.data || []) {
+            timelineEvents.push({
+                type: 'note_added',
+                timestamp: note.created_at,
+                details: 'Admin note added',
+            });
+        }
+
+        for (const tag of tagAssignmentsResult.data || []) {
+            timelineEvents.push({
+                type: 'tag_added',
+                timestamp: tag.assigned_at,
+                details: 'Tag assigned',
+            });
+        }
+
+        // Sort by timestamp
+        timelineEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
         return {
             response,
             recordings: recordingsWithSignedUrls,
+            timelineEvents,
         };
     } catch (error) {
         console.error('Failed to fetch response:', error);
@@ -76,7 +144,7 @@ export default async function ResponseDetailPage({
         notFound();
     }
 
-    const { response, recordings } = data;
+    const { response, recordings, timelineEvents } = data;
     const formData = response.form_data || {};
 
     // Ensure we capture critical data from both column and JSON
@@ -322,6 +390,11 @@ export default async function ResponseDetailPage({
                         </div>
                         <p className="mt-2 text-xl font-bold text-white uppercase">{isOptedIn ? 'Authorized' : 'Denied'}</p>
                     </div>
+
+                    {/* Activity Timeline */}
+                    {timelineEvents && timelineEvents.length > 0 && (
+                        <ActivityTimeline events={timelineEvents} />
+                    )}
                 </div>
             </div>
         </div>

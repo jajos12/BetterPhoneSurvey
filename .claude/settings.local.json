@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\LOQ\\\\source\\\\repos\\\\jeremiah\\\\Betterphone-Survey-landing-page-1\\\\app\\\\admin\"\" 2>&1 | grep -E \"^d \")",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

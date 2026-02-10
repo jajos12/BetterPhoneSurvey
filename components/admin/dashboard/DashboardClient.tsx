@@ -30,30 +30,42 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
     }
   }, []);
 
-  // Supabase Realtime subscription
+  // Supabase Realtime subscription (graceful failure)
   useEffect(() => {
-    const channel = supabase
-      .channel('admin-realtime')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'survey_responses',
-      }, () => {
-        refreshStats();
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'survey_responses',
-      }, () => {
-        refreshStats();
-      })
-      .subscribe((status) => {
-        setIsLive(status === 'SUBSCRIBED');
-      });
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    try {
+      channel = supabase
+        .channel('admin-realtime')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'survey_responses',
+        }, () => {
+          refreshStats();
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'survey_responses',
+        }, () => {
+          refreshStats();
+        })
+        .subscribe((status, err) => {
+          if (status === 'SUBSCRIBED') {
+            setIsLive(true);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[Realtime] Connection failed, falling back to polling.');
+            setIsLive(false);
+          }
+        });
+    } catch (e) {
+      console.warn('[Realtime] Could not connect, using polling fallback.');
+      setIsLive(false);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [refreshStats]);
 

@@ -49,7 +49,11 @@ CREATE INDEX IF NOT EXISTS idx_insights_expires ON ai_insights_cache(expires_at)
 ALTER TABLE survey_responses
   ADD COLUMN IF NOT EXISTS ai_summary JSONB,
   ADD COLUMN IF NOT EXISTS ai_summary_generated_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS furthest_step INTEGER DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS furthest_step INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS survey_type TEXT DEFAULT 'parent';
+
+-- Index for survey_type
+CREATE INDEX IF NOT EXISTS idx_responses_type ON survey_responses(survey_type);
 
 -- Performance indexes
 CREATE INDEX IF NOT EXISTS idx_responses_started_at ON survey_responses(started_at);

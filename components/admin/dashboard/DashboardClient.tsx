@@ -17,10 +17,14 @@ interface DashboardClientProps {
 export default function DashboardClient({ initialStats }: DashboardClientProps) {
   const [stats, setStats] = useState<DashboardStats>(initialStats);
   const [isLive, setIsLive] = useState(false);
+  const [view, setView] = useState<'parent' | 'school_admin'>('parent');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const refreshStats = useCallback(async () => {
+  const refreshStats = useCallback(async (type?: 'parent' | 'school_admin') => {
+    const targetType = type || view;
+    // Don't set loading on background refresh, only on manual toggle
     try {
-      const res = await fetch('/api/admin/stats');
+      const res = await fetch(`/api/admin/stats?type=${targetType}`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -28,7 +32,16 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
     } catch {
       // Silently fail on refresh
     }
-  }, []);
+    setIsLoading(false);
+  }, [view]);
+
+  // Handle toggle change
+  const handleViewChange = (newView: 'parent' | 'school_admin') => {
+    if (newView === view) return;
+    setView(newView);
+    setIsLoading(true);
+    refreshStats(newView);
+  };
 
   // Supabase Realtime subscription (graceful failure)
   useEffect(() => {
@@ -36,42 +49,20 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
 
     try {
       channel = supabase
-        .channel('admin-realtime')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'survey_responses',
-        }, () => {
-          refreshStats();
-        })
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'survey_responses',
-        }, () => {
-          refreshStats();
-        })
-        .subscribe((status, err) => {
-          if (status === 'SUBSCRIBED') {
-            setIsLive(true);
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('[Realtime] Connection failed, falling back to polling.');
-            setIsLive(false);
-          }
+        .channel('admin-dashboard-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'survey_responses' }, () => refreshStats())
+        .subscribe((status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CHANNEL_ERROR' | 'CLOSED') => {
+          if (status === 'SUBSCRIBED') setIsLive(true);
+          else if (status === 'CHANNEL_ERROR') setIsLive(false);
         });
-    } catch (e) {
-      console.warn('[Realtime] Could not connect, using polling fallback.');
-      setIsLive(false);
-    }
+    } catch (e) { setIsLive(false); }
 
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, [refreshStats]);
 
-  // Periodic refresh every 60 seconds as fallback
+  // Periodic refresh
   useEffect(() => {
-    const interval = setInterval(refreshStats, 60000);
+    const interval = setInterval(() => refreshStats(), 60000);
     return () => clearInterval(interval);
   }, [refreshStats]);
 
@@ -83,23 +74,49 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
   ];
 
   const urgencyDominantColor = URGENCY_COLORS[stats.urgency.dominant as keyof typeof URGENCY_COLORS] || URGENCY_COLORS.low;
+  const accentColor = view === 'school_admin' ? 'cyan' : 'blue';
 
   return (
-    <div className="space-y-10">
+    <div className={`space-y-10 ${isLoading ? 'opacity-70 pointer-events-none transition-opacity' : ''}`}>
       {/* Header */}
-      <div className="relative">
-        <div className="absolute -left-10 top-0 h-full w-1 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-4xl font-extrabold text-white tracking-tight">Command Center</h1>
-          {isLive && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Live</span>
-            </span>
-          )}
+      <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className={`absolute -left-10 top-0 h-full w-1 ${view === 'school_admin' ? 'bg-cyan-500' : 'bg-white'} rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-colors`} />
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-4xl font-extrabold text-white tracking-tight">Command Center</h1>
+            {isLive && (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Live</span>
+              </span>
+            )}
+          </div>
+          <p className="text-white/50 font-medium tracking-wide">Real-time intelligence from {view === 'parent' ? 'parent families' : 'school administrators'}</p>
         </div>
-        <p className="text-white/50 font-medium tracking-wide">Real-time intelligence from the BetterPhone survey network</p>
+
+        {/* View Toggle */}
+        <div className="bg-[#0c0c0c] border border-white/10 p-1 rounded-xl flex">
+          <button
+            onClick={() => handleViewChange('parent')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'parent'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
+              : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            Parents
+          </button>
+          <button
+            onClick={() => handleViewChange('school_admin')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'school_admin'
+              ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-900/50'
+              : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            School Admins
+          </button>
+        </div>
       </div>
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

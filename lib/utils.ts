@@ -11,7 +11,7 @@ export function generateSessionId(): string {
 }
 
 // Get or create session ID from localStorage
-export function getSessionId(): string {
+export function getSessionId(prefix: string = 'sess_'): string {
     if (typeof window === 'undefined') return '';
 
     let sessionId = localStorage.getItem('betterphone_session_id');

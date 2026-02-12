@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
                 current_step: formData.currentStep || 'unknown',
                 is_completed: formData.isCompleted || false,
                 email: validEmail,
+                survey_type: formData.surveyType || 'parent',
                 updated_at: new Date().toISOString(),
             }, {
                 onConflict: 'session_id'

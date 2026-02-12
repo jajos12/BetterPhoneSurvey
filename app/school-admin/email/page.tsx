@@ -19,7 +19,7 @@ export default function SchoolAdminEmailPage() {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         if (!email.trim()) {
             setError('Work email is required');
             return;
@@ -30,34 +30,26 @@ export default function SchoolAdminEmailPage() {
             return;
         }
 
-        setIsSubmitting(true);
         setError(null);
-
         updateFormData({ emailOptIn: optIn, email: email });
 
-        try {
-            const response = await fetch('/api/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sessionId,
-                    ...formData,
-                    emailOptIn: optIn,
-                    email: email,
-                    isCompleted: false,
-                    currentStep: 'email',
-                    surveyType: 'school_admin',
-                }),
-            });
-
-            if (!response.ok) {
-                console.error('Save failed:', await response.text());
-            }
-        } catch (error) {
-            console.error('Save failed:', error);
-        }
-
+        // Navigate IMMEDIATELY — don't wait for save
         router.push('/school-admin/step/1');
+
+        // Save in background (fire and forget)
+        fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId,
+                ...formData,
+                emailOptIn: optIn,
+                email: email,
+                isCompleted: false,
+                currentStep: 'email',
+                surveyType: 'school_admin',
+            }),
+        }).catch(err => console.error('Save failed:', err));
     };
 
     return (

@@ -202,7 +202,7 @@ function Step8Content() {
                         <div className="w-full border-t border-gray-100"></div>
                     </div>
                     <div className="relative flex justify-center text-xs uppercase tracking-widest text-text-muted">
-                        <span className="bg-white px-4">Or fill out the form</span>
+                        <span className="bg-surface-primary px-4">Or fill out the form</span>
                     </div>
                 </div>
 
@@ -256,7 +256,7 @@ function Step8Content() {
                     </div>
 
                     <div>
-                        <label className="block font-medium mb-2 text-sm text-text-secondary font-semibold mb-3">Household Income (Optional)</label>
+                        <label className="block font-medium text-sm text-text-secondary font-semibold mb-3">Household Income (Optional)</label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {INCOME_OPTIONS.map((opt) => (
                                 <button

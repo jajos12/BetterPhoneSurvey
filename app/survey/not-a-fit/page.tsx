@@ -12,22 +12,18 @@ export default function NotAFitPage() {
     const { sessionId, formData, updateFormData } = useSurvey();
     const [state, setState] = useState<PageState>('initial');
 
-    const saveResponse = async (updates: any) => {
-        try {
-            await fetch('/api/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sessionId,
-                    ...formData,
-                    ...updates,
-                    isCompleted: true,
-                    currentStep: 'not-a-fit'
-                }),
-            });
-        } catch (error) {
-            console.error('Save failed:', error);
-        }
+    const saveResponse = (updates: any) => {
+        fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId,
+                ...formData,
+                ...updates,
+                isCompleted: true,
+                currentStep: 'not-a-fit'
+            }),
+        }).catch(err => console.error('Save failed:', err));
     };
 
     const handleYes = () => {

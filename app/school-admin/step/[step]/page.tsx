@@ -484,7 +484,6 @@ export default function SchoolAdminStepPage({
     const stepId = use(params).step;
     const router = useRouter();
     const { sessionId, formData, updateFormData } = useSchoolAdmin();
-    const [isSaving, setIsSaving] = useState(false);
 
     // We don't really need localData state anymore since we update formData directly in components now
     // But we might want to capture "current updates" for the save payload?
@@ -504,38 +503,28 @@ export default function SchoolAdminStepPage({
         updateFormData(data);
     }, [updateFormData]);
 
-    const handleNext = async () => {
-        setIsSaving(true);
-
-        // 1. Prepare data payload
-        const payload = {
-            sessionId,
-            ...formData, // includes everything so far
-            currentStep: stepId,
-            isCompleted: false,
-            surveyType: 'school_admin'
-        };
-
-        // 2. Save to DB
-        try {
-            await fetch('/api/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-        } catch (err) {
-            console.error(err);
-        }
-
-        setIsSaving(false);
-
-        // 3. Navigate
+    const handleNext = () => {
+        // 1. Navigate IMMEDIATELY — don't wait for save
         if (nextStep) {
             router.push(nextStep.path);
         } else {
-            // End of survey
             router.push('/school-admin/thank-you');
         }
+
+        // 2. Save in background (fire and forget)
+        const payload = {
+            sessionId,
+            ...formData,
+            currentStep: nextStep?.id || stepId,
+            isCompleted: stepId === '14',
+            surveyType: 'school_admin'
+        };
+
+        fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        }).catch(err => console.error('Save failed:', err));
     };
 
     const handleBack = () => {
@@ -639,13 +628,13 @@ export default function SchoolAdminStepPage({
                         {/* Right: Continue */}
                         <Button
                             onClick={handleNext}
-                            disabled={!stepValid || isSaving}
+                            disabled={!stepValid}
                             className={`min-w-[140px] transition-all ${stepValid
                                 ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'
                                 : 'bg-white/10 text-white/30 cursor-not-allowed'
                                 }`}
                         >
-                            {isSaving ? 'Saving...' : isLastStep ? 'Complete Survey' : 'Continue'}
+                            {isLastStep ? 'Complete Survey' : 'Continue'}
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                             </svg>
@@ -657,13 +646,13 @@ export default function SchoolAdminStepPage({
                         {/* Continue button - prominent at top */}
                         <Button
                             onClick={handleNext}
-                            disabled={!stepValid || isSaving}
+                            disabled={!stepValid}
                             className={`w-full min-h-[52px] text-lg justify-center transition-all ${stepValid
                                 ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'
                                 : 'bg-white/10 text-white/30 cursor-not-allowed'
                                 }`}
                         >
-                            {isSaving ? 'Saving...' : isLastStep ? 'Complete Survey' : 'Continue'}
+                            {isLastStep ? 'Complete Survey' : 'Continue'}
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                             </svg>

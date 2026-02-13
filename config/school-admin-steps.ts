@@ -71,47 +71,62 @@ export const ADMIN_STEPS: StepConfig[] = [
         id: '8',
         path: '/school-admin/step/8',
         type: 'form',
-        title: 'School Profile',
-        description: 'Tell us about your school.',
+        title: 'Enforcement Dynamics',
+        description: 'Help us understand where enforcement challenges come from and how teachers experience it.',
     },
     {
         id: '9',
         path: '/school-admin/step/9',
+        type: 'voice',
+        title: 'Your Ideal Solution',
+        description: 'Forget what\'s been tried before. If you could wave a magic wand, what would the perfect phone solution look like for your school?',
+        hasVoice: true,
+    },
+    {
+        id: '10',
+        path: '/school-admin/step/10',
+        type: 'form',
+        title: 'School Profile',
+        description: 'Tell us about your school.',
+    },
+    {
+        id: '11',
+        path: '/school-admin/step/11',
         type: 'form',
         title: 'Current Policy',
         description: 'What is your school\'s current phone policy?',
     },
     {
-        id: '10',
-        path: '/school-admin/step/10',
+        id: '12',
+        path: '/school-admin/step/12',
         type: 'choice',
         title: 'Budget',
         description: 'What price range per student device would your school consider?',
     },
     {
-        id: '11',
-        path: '/school-admin/step/11',
+        id: '13',
+        path: '/school-admin/step/13',
         type: 'text',
         title: 'Decision Process',
         description: 'Who makes decisions about phone policies and technology purchases at your school?',
     },
     {
-        id: '12',
-        path: '/school-admin/step/12',
+        id: '14',
+        path: '/school-admin/step/14',
         type: 'choice',
         title: 'Pilot Interest',
         description: 'Would your school be interested in learning more or piloting a solution?',
     },
     {
-        id: '13',
-        path: '/school-admin/step/13',
+        id: '15',
+        path: '/school-admin/step/15',
         type: 'form',
         title: 'Schedule a Call',
         description: 'Would you be open to a brief call to discuss your school\'s challenges?',
     },
     {
-        id: '14',
-        path: '/school-admin/step/14',
+        id: '16',
+        path: '/school-admin/step/16',
         type: 'text',
         title: 'Anything Else?',
         description: 'Is there anything else about student phone use you\'d like us to know?',
@@ -136,10 +151,13 @@ export const SCHOOL_ISSUES_OPTIONS = [
     { value: 'mental-health', label: 'Mental health concerns linked to phone/social media use' },
     { value: 'no-socializing', label: 'Students on phones during breaks instead of socializing' },
     { value: 'parent-complaints', label: 'Parent complaints about phone-related incidents' },
+    { value: 'parent-undermining', label: 'Parents undermining school phone policies' },
+    { value: 'parent-pushback', label: 'Parent pushback when phones are confiscated' },
     { value: 'theft-damage', label: 'Theft or damage of expensive devices' },
     { value: 'missing-instruction', label: 'Students missing instruction due to phone use' },
     { value: 'staff-conflict', label: 'Conflict between staff and students when enforcing rules' },
     { value: 'phone-anxiety', label: 'Students visibly anxious or unable to focus without their phone' },
+    { value: 'legal-liability', label: 'Legal or liability concerns (recordings, privacy, incidents)' },
 ];
 
 export const SOLUTIONS_TRIED_OPTIONS = [
@@ -216,6 +234,28 @@ export const DISRUPTION_FREQUENCY_OPTIONS = [
     { value: 'once-daily', label: 'About once a day' },
     { value: 'few-weekly', label: 'A few times per week' },
     { value: 'rarely', label: 'Rarely or never' },
+];
+
+export const ENFORCEMENT_SOURCE_OPTIONS = [
+    { value: 'mostly-students', label: 'Mostly from students' },
+    { value: 'mostly-parents', label: 'Mostly from parents' },
+    { value: 'equal-mix', label: 'Equal mix of both' },
+    { value: 'from-staff', label: 'More from staff/teachers reluctant to enforce' },
+    { value: 'not-much', label: 'Not much resistance' },
+];
+
+export const TEACHER_CONSISTENCY_OPTIONS = [
+    { value: 'very-consistent', label: 'Very consistent — all teachers enforce equally' },
+    { value: 'mostly-consistent', label: 'Mostly consistent with a few exceptions' },
+    { value: 'inconsistent', label: 'Inconsistent — varies significantly between teachers' },
+    { value: 'no-enforcement', label: 'Most teachers have given up enforcing' },
+];
+
+export const TEACHER_SUPPORT_OPTIONS = [
+    { value: 'well-supported', label: 'Well supported — admin backs them up consistently' },
+    { value: 'somewhat', label: 'Somewhat — support is uneven' },
+    { value: 'not-supported', label: 'Not supported — teachers feel on their own' },
+    { value: 'unsure', label: 'Unsure / haven\'t assessed this' },
 ];
 
 // ── Navigation Helpers ────────────────────────────────────

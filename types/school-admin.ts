@@ -33,7 +33,16 @@ export interface SchoolAdminFormData {
     step7Text?: string;
     step7Recording?: boolean;
 
-    // Step 8: School profile
+    // Step 8: Enforcement dynamics
+    enforcementSource?: string;
+    teacherConsistency?: string;
+    teacherSupport?: string;
+
+    // Step 9: Voice - Ideal solution
+    step9Text?: string;
+    step9Recording?: boolean;
+
+    // Step 10: School profile
     schoolType?: string;
     gradeLevel?: string;
     enrollment?: string;
@@ -41,30 +50,30 @@ export interface SchoolAdminFormData {
     schoolLocation?: string;
     adminRole?: string;
 
-    // Step 9: Current policy
+    // Step 11: Current policy
     currentPolicy?: string;
     currentPolicyOther?: string;
     compliancePercent?: number;
 
-    // Step 10: Budget
+    // Step 12: Budget
     budgetRange?: string;
 
-    // Step 11: Decision process
-    step11Text?: string;
-    step11Recording?: boolean;
+    // Step 13: Decision process
+    step13Text?: string;
+    step13Recording?: boolean;
 
-    // Step 12: Pilot interest
+    // Step 14: Pilot interest
     pilotInterest?: string;
 
-    // Step 13: Contact opt-in
+    // Step 15: Contact opt-in
     callInterest?: string;
     contactPhone?: string;
     contactPreferredTime?: string;
     contactName?: string;
 
-    // Step 14: Anything else
-    step14Text?: string;
-    step14Recording?: boolean;
+    // Step 16: Anything else
+    step16Text?: string;
+    step16Recording?: boolean;
 
     // Meta
     currentStep?: string;

@@ -20,6 +20,9 @@ import {
     ROLE_OPTIONS,
     PILOT_INTEREST_OPTIONS,
     CALL_INTEREST_OPTIONS,
+    ENFORCEMENT_SOURCE_OPTIONS,
+    TEACHER_CONSISTENCY_OPTIONS,
+    TEACHER_SUPPORT_OPTIONS,
     getAdminNextStep,
     getAdminPrevStep,
     getAdminProgress
@@ -82,14 +85,14 @@ function Step4Content({ onNext }: { onNext: (data: any) => void }) { // Ranking
     const selectedIssues = formData.schoolIssues || [];
     const rankedIssues = formData.issueRanking || selectedIssues;
 
-    const validIssues = selectedIssues.filter(issue => selectedIssues.includes(issue));
+    const validIssues = selectedIssues.filter((issue: string) => selectedIssues.includes(issue));
 
     const currentOrder = [
-        ...rankedIssues.filter(i => validIssues.includes(i)),
-        ...validIssues.filter(i => !rankedIssues.includes(i))
+        ...rankedIssues.filter((i: string) => validIssues.includes(i)),
+        ...validIssues.filter((i: string) => !rankedIssues.includes(i))
     ];
 
-    const items = validIssues.map(issue => ({
+    const items = validIssues.map((issue: string) => ({
         value: issue,
         label: SCHOOL_ISSUES_OPTIONS.find(o => o.value === issue)?.label || issue
     }));
@@ -153,7 +156,7 @@ function Step6Content({ onNext }: { onNext: (data: any) => void }) { // Solution
 
     return (
         <div className="space-y-8">
-            {solutions.map(sol => {
+            {solutions.map((sol: string) => {
                 const label = SOLUTIONS_TRIED_OPTIONS.find(o => o.value === sol)?.label || sol;
                 return (
                     <div key={sol} className="bg-white/5 border border-white/10 rounded-xl p-4">
@@ -188,22 +191,68 @@ function Step7Content() { // Barriers (Voice)
     );
 }
 
-function Step8Content({ onNext }: { onNext: (data: any) => void }) { // School Profile
+function Step8Content({ onNext }: { onNext: (data: any) => void }) { // Enforcement Dynamics
     const { formData } = useSchoolAdmin();
 
-    // We can init state from formData
-    // We update on every change.
+    return (
+        <div className="space-y-8">
+            {/* Enforcement source */}
+            <div>
+                <p className="text-sm font-bold text-text-secondary mb-3 uppercase tracking-wider">Where does most enforcement resistance come from?</p>
+                <RadioGroup
+                    name="enforcementSource"
+                    options={ENFORCEMENT_SOURCE_OPTIONS}
+                    value={formData.enforcementSource || null}
+                    onChange={(val) => onNext({ enforcementSource: val })}
+                />
+            </div>
+
+            {/* Teacher consistency */}
+            <div className="border-t border-white/10 pt-6">
+                <p className="text-sm font-bold text-text-secondary mb-3 uppercase tracking-wider">How consistent is enforcement across teachers?</p>
+                <RadioGroup
+                    name="teacherConsistency"
+                    options={TEACHER_CONSISTENCY_OPTIONS}
+                    value={formData.teacherConsistency || null}
+                    onChange={(val) => onNext({ teacherConsistency: val })}
+                />
+            </div>
+
+            {/* Teacher support */}
+            <div className="border-t border-white/10 pt-6">
+                <p className="text-sm font-bold text-text-secondary mb-3 uppercase tracking-wider">Do teachers feel supported by administration?</p>
+                <RadioGroup
+                    name="teacherSupport"
+                    options={TEACHER_SUPPORT_OPTIONS}
+                    value={formData.teacherSupport || null}
+                    onChange={(val) => onNext({ teacherSupport: val })}
+                />
+            </div>
+        </div>
+    );
+}
+
+function Step9Content() { // Ideal Solution (Voice)
+    const { sessionId, formData } = useSchoolAdmin();
+    return (
+        <>
+            <p className="text-text-secondary mb-6">
+                What would actually make your job easier day-to-day? Think about what a perfect solution would look like — no constraints.
+            </p>
+            <AdminVoiceInput
+                sessionId={sessionId}
+                stepNumber={9}
+                placeholder="The ideal solution would..."
+                initialValue={formData.step9Text}
+            />
+        </>
+    );
+}
+
+function Step10Content({ onNext }: { onNext: (data: any) => void }) { // School Profile
+    const { formData } = useSchoolAdmin();
 
     const update = (field: string, val: any) => {
-        // We don't need local state if we bubble up immediately, 
-        // BUT inputs need to be controlled.
-        // We can just bubble up the partial change?
-        // Let's keep it simple: read from formData directly + bubble up changes.
-        // Wait, if we bubble up, global state updates, re-renders this component.
-        // So we can use formData as the source of truth if we want.
-        // Or keep local state for speed and avoiding flicker if context is slow.
-        // Context is usually fast enough.
-        // Let's stick to the pattern:
         onNext({ [field]: val });
     };
 
@@ -271,9 +320,8 @@ function Step8Content({ onNext }: { onNext: (data: any) => void }) { // School P
     );
 }
 
-function Step9Content({ onNext }: { onNext: (data: any) => void }) { // Current Policy
+function Step11Content({ onNext }: { onNext: (data: any) => void }) { // Current Policy
     const { formData } = useSchoolAdmin();
-    // Local state for smoother slider interaction
     const [compliance, setCompliance] = useState(formData.compliancePercent || 50);
 
     const handlePolicyChange = (val: string) => {
@@ -283,7 +331,6 @@ function Step9Content({ onNext }: { onNext: (data: any) => void }) { // Current 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseInt(e.target.value);
         setCompliance(val);
-        // Debouncing would be ideal but for now let's just update
         onNext({ compliancePercent: val });
     };
 
@@ -301,28 +348,22 @@ function Step9Content({ onNext }: { onNext: (data: any) => void }) { // Current 
                     <span>Student Compliance Estimate</span>
                 </label>
 
-                {/* Large value display */}
                 <div className="text-center mb-4">
                     <span className="text-5xl font-black text-cyan-400">{compliance}</span>
                     <span className="text-2xl font-bold text-cyan-400/60">%</span>
                 </div>
 
-                {/* Custom slider track */}
                 <div className="relative pt-2 pb-1">
-                    {/* Background track */}
                     <div className="absolute top-[18px] left-0 right-0 h-3 bg-white/10 rounded-full" />
-                    {/* Filled track */}
                     <div
                         className="absolute top-[18px] left-0 h-3 bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500 rounded-full transition-all duration-150"
                         style={{ width: `${compliance}%` }}
                     />
-                    {/* Tick marks */}
                     <div className="absolute top-[18px] left-0 right-0 h-3 flex justify-between px-[6px]">
                         {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((tick) => (
                             <div key={tick} className={`w-0.5 h-3 rounded-full ${tick <= compliance ? 'bg-white/30' : 'bg-white/10'}`} />
                         ))}
                     </div>
-                    {/* Actual range input */}
                     <input
                         type="range"
                         min="0"
@@ -344,7 +385,6 @@ function Step9Content({ onNext }: { onNext: (data: any) => void }) { // Current 
                     />
                 </div>
 
-                {/* Labels with emoji */}
                 <div className="flex justify-between text-xs font-medium mt-1">
                     <span className="text-red-400">🚫 Ignoring it</span>
                     <span className="text-white/30">50%</span>
@@ -355,7 +395,7 @@ function Step9Content({ onNext }: { onNext: (data: any) => void }) { // Current 
     );
 }
 
-function Step10Content({ onNext }: { onNext: (data: any) => void }) { // Budget
+function Step12Content({ onNext }: { onNext: (data: any) => void }) { // Budget
     const { formData } = useSchoolAdmin();
     const [selected, setSelected] = useState(formData.budgetRange || null);
 
@@ -374,20 +414,20 @@ function Step10Content({ onNext }: { onNext: (data: any) => void }) { // Budget
     );
 }
 
-function Step11Content() { // Decision Process
+function Step13Content() { // Decision Process
     const { sessionId, formData, updateFormData } = useSchoolAdmin();
     return (
         <AdminVoiceInput
             sessionId={sessionId}
-            stepNumber={11}
+            stepNumber={13}
             placeholder="Decisions are made by..."
-            initialValue={formData.step11Text}
-            onTextChange={(text) => updateFormData({ step11Text: text })}
+            initialValue={formData.step13Text}
+            onTextChange={(text) => updateFormData({ step13Text: text })}
         />
     );
 }
 
-function Step12Content({ onNext }: { onNext: (data: any) => void }) { // Pilot Interest
+function Step14Content({ onNext }: { onNext: (data: any) => void }) { // Pilot Interest
     const { formData } = useSchoolAdmin();
     const [selected, setSelected] = useState(formData.pilotInterest || null);
 
@@ -406,9 +446,8 @@ function Step12Content({ onNext }: { onNext: (data: any) => void }) { // Pilot I
     );
 }
 
-function Step13Content({ onNext }: { onNext: (data: any) => void }) { // Contact / Call
+function Step15Content({ onNext }: { onNext: (data: any) => void }) { // Contact / Call
     const { formData } = useSchoolAdmin();
-    // We can rely on formData for source of truth to simplify
     const interest = formData.callInterest;
 
     const handleInterestChange = (val: string) => {
@@ -459,15 +498,15 @@ function Step13Content({ onNext }: { onNext: (data: any) => void }) { // Contact
     );
 }
 
-function Step14Content() { // Anything Else
+function Step16Content() { // Anything Else
     const { sessionId, formData, updateFormData } = useSchoolAdmin();
     return (
         <AdminVoiceInput
             sessionId={sessionId}
-            stepNumber={14}
+            stepNumber={16}
             placeholder="Anything else we should know?"
-            initialValue={formData.step14Text}
-            onTextChange={(text) => updateFormData({ step14Text: text })}
+            initialValue={formData.step16Text}
+            onTextChange={(text) => updateFormData({ step16Text: text })}
         />
     );
 }
@@ -516,7 +555,7 @@ export default function SchoolAdminStepPage({
             sessionId,
             ...formData,
             currentStep: nextStep?.id || stepId,
-            isCompleted: stepId === '14',
+            isCompleted: stepId === '16',
             surveyType: 'school_admin'
         };
 
@@ -546,12 +585,14 @@ export default function SchoolAdminStepPage({
             case '6': return <Step6Content onNext={handleDataChange} />;
             case '7': return <Step7Content />;
             case '8': return <Step8Content onNext={handleDataChange} />;
-            case '9': return <Step9Content onNext={handleDataChange} />;
+            case '9': return <Step9Content />;
             case '10': return <Step10Content onNext={handleDataChange} />;
-            case '11': return <Step11Content />;
+            case '11': return <Step11Content onNext={handleDataChange} />;
             case '12': return <Step12Content onNext={handleDataChange} />;
-            case '13': return <Step13Content onNext={handleDataChange} />;
-            case '14': return <Step14Content />;
+            case '13': return <Step13Content />;
+            case '14': return <Step14Content onNext={handleDataChange} />;
+            case '15': return <Step15Content onNext={handleDataChange} />;
+            case '16': return <Step16Content />;
             default: return <div>Unknown Step</div>;
         }
     };
@@ -567,19 +608,21 @@ export default function SchoolAdminStepPage({
             case '5': return ((formData.solutionsTried as string[])?.length || 0) > 0;
             case '6': return Object.keys(formData.solutionEffectiveness || {}).length > 0;
             case '7': return !!(data.step7Text || data.step7Recording);
-            case '8': return !!(formData.schoolType || formData.gradeLevel || formData.adminRole);
-            case '9': return !!(formData.currentPolicy);
-            case '10': return !!(formData.budgetRange);
-            case '11': return !!(data.step11Text || data.step11Recording);
-            case '12': return !!(formData.pilotInterest);
-            case '13': return !!(formData.callInterest);
-            case '14': return !!(data.step14Text || data.step14Recording);
+            case '8': return !!(formData.enforcementSource || formData.teacherConsistency || formData.teacherSupport);
+            case '9': return !!(data.step9Text || data.step9Recording);
+            case '10': return !!(formData.schoolType || formData.gradeLevel || formData.adminRole);
+            case '11': return !!(formData.currentPolicy);
+            case '12': return !!(formData.budgetRange);
+            case '13': return !!(data.step13Text || data.step13Recording);
+            case '14': return !!(formData.pilotInterest);
+            case '15': return !!(formData.callInterest);
+            case '16': return !!(data.step16Text || data.step16Recording);
             default: return true;
         }
     };
 
     const stepValid = isStepValid();
-    const isLastStep = stepId === '14';
+    const isLastStep = stepId === '16';
 
     return (
         <>
@@ -593,7 +636,7 @@ export default function SchoolAdminStepPage({
             <GlassCard className="flex-1 flex flex-col animate-fade-in border-cyan-500/10">
                 <div className="mb-8">
                     <span className="inline-block text-xs font-semibold uppercase tracking-widest text-cyan-400 mb-3">
-                        Step {stepId} of 14
+                        Step {stepId} of 16
                     </span>
                     <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
                         {currentStepConfig.title}

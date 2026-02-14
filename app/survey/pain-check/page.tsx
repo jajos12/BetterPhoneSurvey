@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { RadioGroup } from '@/components/ui/RadioGroup';
@@ -20,6 +20,12 @@ export default function PainCheckPage() {
     const router = useRouter();
     const { formData, updateFormData } = useSurvey();
     const [selected, setSelected] = useState<string | null>(formData.painCheck || null);
+
+    // Prefetch all possible destinations
+    useEffect(() => {
+        router.prefetch('/survey/email');
+        router.prefetch('/survey/not-a-fit');
+    }, [router]);
 
     const handleContinue = () => {
         updateFormData({ painCheck: selected as PainCheckValue });

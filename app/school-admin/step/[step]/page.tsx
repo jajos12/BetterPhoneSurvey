@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useCallback } from 'react';
+import { use, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -535,6 +535,14 @@ export default function SchoolAdminStepPage({
     const progress = getAdminProgress(stepId);
     const nextStep = getAdminNextStep(stepId);
     const prevStep = getAdminPrevStep(stepId);
+
+    // Prefetch next and previous steps for instant navigation
+    useEffect(() => {
+        const next = getAdminNextStep(stepId);
+        const prev = getAdminPrevStep(stepId);
+        if (next) router.prefetch(next.path);
+        if (prev) router.prefetch(prev.path);
+    }, [stepId, router]);
 
     // Handler for non-voice components to bubble up data
     // Memoized to prevent infinite loops in children effects (though we removed effects, this is still good practice)

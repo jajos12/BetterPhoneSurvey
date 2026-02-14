@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,12 @@ export default function EmailPage() {
     const [email, setEmail] = useState(formData.email || '');
     const [optIn, setOptIn] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Prefetch next + back destinations
+    useEffect(() => {
+        router.prefetch('/survey/step/1');
+        router.prefetch('/survey/pain-check');
+    }, [router]);
 
     const validateEmail = (e: string) => {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);

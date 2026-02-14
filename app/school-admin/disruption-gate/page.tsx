@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { RadioGroup } from '@/components/ui/RadioGroup';
@@ -13,6 +13,12 @@ export default function DisruptionGatePage() {
     const router = useRouter();
     const { formData, updateFormData } = useSchoolAdmin();
     const [selected, setSelected] = useState<string | null>(formData.disruptionFrequency || null);
+
+    // Prefetch all possible destinations
+    useEffect(() => {
+        router.prefetch('/school-admin/email');
+        router.prefetch('/school-admin/not-a-fit');
+    }, [router]);
 
     const handleContinue = () => {
         updateFormData({ disruptionFrequency: selected });

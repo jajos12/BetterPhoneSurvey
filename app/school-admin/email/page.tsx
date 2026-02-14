@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +14,12 @@ export default function SchoolAdminEmailPage() {
     const [optIn, setOptIn] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Prefetch next + back destinations
+    useEffect(() => {
+        router.prefetch('/school-admin/step/1');
+        router.prefetch('/school-admin/disruption-gate');
+    }, [router]);
 
     const validateEmail = (e: string) => {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -143,25 +149,16 @@ export default function SchoolAdminEmailPage() {
                         </div>
                         <Button
                             onClick={handleSubmit}
-                            disabled={isSubmitting || !email.trim()}
+                            disabled={!email.trim()}
                             className={`min-w-[140px] transition-all ${email.trim()
                                 ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'
                                 : 'bg-white/10 text-white/30 cursor-not-allowed'
                                 }`}
                         >
-                            {isSubmitting ? (
-                                <span className="flex items-center gap-2">
-                                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Processing...
-                                </span>
-                            ) : (
-                                <>
-                                    Continue
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                    </svg>
-                                </>
-                            )}
+                            Continue
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
                         </Button>
                     </div>
 
@@ -169,25 +166,16 @@ export default function SchoolAdminEmailPage() {
                     <div className="sm:hidden space-y-3">
                         <Button
                             onClick={handleSubmit}
-                            disabled={isSubmitting || !email.trim()}
+                            disabled={!email.trim()}
                             className={`w-full min-h-[52px] text-lg justify-center transition-all ${email.trim()
                                 ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/20'
                                 : 'bg-white/10 text-white/30 cursor-not-allowed'
                                 }`}
                         >
-                            {isSubmitting ? (
-                                <span className="flex items-center gap-2">
-                                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Processing...
-                                </span>
-                            ) : (
-                                <>
-                                    Continue
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                    </svg>
-                                </>
-                            )}
+                            Continue
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
                         </Button>
                         <div className="flex items-center justify-between">
                             <Button variant="secondary" onClick={() => router.push('/school-admin/disruption-gate')} className="text-sm">

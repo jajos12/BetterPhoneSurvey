@@ -434,12 +434,12 @@ export default function StepPage({ params }: { params: Promise<{ step: string }>
         }
     }, [step]);
 
-    // Optimistic Prefetching
+    // Optimistic Prefetching (next + previous)
     useEffect(() => {
         const next = getNextStep(step);
-        if (next) {
-            router.prefetch(next.path);
-        }
+        const prev = getPrevStep(step);
+        if (next) router.prefetch(next.path);
+        if (prev) router.prefetch(prev.path);
     }, [step, router]);
 
     if (!stepConfig || !StepContent) {

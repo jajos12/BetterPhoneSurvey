@@ -18,6 +18,7 @@ interface FilterState {
     dateFrom: string;
     dateTo: string;
     tags: string;
+    surveyType: string;
 }
 
 interface ResponseListProps {
@@ -49,6 +50,7 @@ export function ResponseList({ responses, page, totalCount, pageSize, initialFil
     const [selectedTags, setSelectedTags] = useState<string[]>(
         initialFilters?.tags ? initialFilters.tags.split(',').filter(Boolean) : []
     );
+    const [surveyType, setSurveyType] = useState(initialFilters?.surveyType || 'all');
 
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -81,6 +83,7 @@ export function ResponseList({ responses, page, totalCount, pageSize, initialFil
             dateFrom: overrides.dateFrom ?? dateFrom,
             dateTo: overrides.dateTo ?? dateTo,
             tags: overrides.tags ?? selectedTags.join(','),
+            surveyType: overrides.surveyType ?? surveyType,
         };
 
         if (current.page > 1) params.set('page', String(current.page));
@@ -91,6 +94,7 @@ export function ResponseList({ responses, page, totalCount, pageSize, initialFil
         if (current.dateFrom) params.set('dateFrom', current.dateFrom);
         if (current.dateTo) params.set('dateTo', current.dateTo);
         if (current.tags) params.set('tags', current.tags);
+        if (current.surveyType && current.surveyType !== 'all') params.set('surveyType', current.surveyType);
 
         const qs = params.toString();
         router.push(`/admin/responses${qs ? `?${qs}` : ''}`);
@@ -128,6 +132,10 @@ export function ResponseList({ responses, page, totalCount, pageSize, initialFil
                 setDateTo(value);
                 navigateWithFilters({ dateTo: value, page: 1 });
                 break;
+            case 'surveyType':
+                setSurveyType(value);
+                navigateWithFilters({ surveyType: value, page: 1 });
+                break;
         }
     };
 
@@ -147,6 +155,7 @@ export function ResponseList({ responses, page, totalCount, pageSize, initialFil
         setDateFrom('');
         setDateTo('');
         setSelectedTags([]);
+        setSurveyType('all');
         router.push('/admin/responses');
     };
 
@@ -213,32 +222,88 @@ export function ResponseList({ responses, page, totalCount, pageSize, initialFil
         }
     };
 
-    const exportAllCSV = () => {
+    const exportAllCSV = async () => {
         if (responses.length === 0) return;
-        const headers = ['Session ID', 'Email', 'Completed', 'Current Step', 'Pain Check', 'Issues', 'Benefits', 'Price Willingness', 'Started At'];
-        const rows = responses.map(r => {
-            const fd = r.form_data || {};
-            return [
-                r.session_id,
-                r.email || 'Anonymous',
-                r.is_completed ? 'Yes' : 'No',
-                r.current_step,
-                fd.painCheck || '',
-                (fd.issues || []).join('; '),
-                (fd.benefits || []).join('; '),
-                (fd.priceWillingness || []).join('; '),
-                r.started_at,
+
+        try {
+            // Fetch recordings for these sessions to get transcripts
+            const sessionIds = responses.map(r => r.session_id);
+            const { data: recordings } = await fetch('/api/admin/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'export', sessionIds }),
+            }).then(res => res.json());
+
+            // Create a lookup for transcripts by session ID
+            const transcriptsMap: Record<string, string[]> = {};
+            recordings?.forEach((r: any) => {
+                if (r.voice_recordings) {
+                    r.voice_recordings.forEach((vr: any) => {
+                        if (vr.transcript) {
+                            if (!transcriptsMap[r.session_id]) transcriptsMap[r.session_id] = [];
+                            transcriptsMap[r.session_id].push(`Step ${vr.step_number}: ${vr.transcript}`);
+                        }
+                    });
+                }
+            });
+
+            // Gather all unique form_data keys across all responses
+            const allKeys = new Set<string>();
+            responses.forEach(r => {
+                const fd = r.form_data || {};
+                Object.keys(fd).forEach(k => allKeys.add(k));
+            });
+            const sortedKeys = Array.from(allKeys).sort();
+
+            const headers = [
+                'Session ID', 
+                'Email', 
+                'Survey Type',
+                'Completed', 
+                'Current Step', 
+                'Started At',
+                'Transcripts',
+                ...sortedKeys
             ];
-        });
-        const csvContent = [headers.join(','), ...rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `responses-${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
-        toast('CSV exported', 'success');
+
+            const rows = responses.map(r => {
+                const fd = r.form_data || {};
+                const transcripts = (transcriptsMap[r.session_id] || []).join(' | ');
+                
+                return [
+                    r.session_id,
+                    r.email || 'Anonymous',
+                    r.survey_type || 'parent',
+                    r.is_completed ? 'Yes' : 'No',
+                    r.current_step,
+                    r.started_at,
+                    transcripts,
+                    ...sortedKeys.map(k => {
+                        const val = fd[k];
+                        if (Array.isArray(val)) return val.join('; ');
+                        if (typeof val === 'object' && val !== null) return JSON.stringify(val);
+                        return val ?? '';
+                    })
+                ];
+            });
+
+            const csvContent = [
+                headers.join(','), 
+                ...rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `responses-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            toast('CSV exported with transcripts and all fields', 'success');
+        } catch (error) {
+            console.error('Export failed:', error);
+            toast('CSV export failed', 'error');
+        }
     };
 
     const handlePageChange = (newPage: number) => {
@@ -280,6 +345,25 @@ export function ResponseList({ responses, page, totalCount, pageSize, initialFil
                                     }`}
                                 >
                                     {f}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex bg-white/5 p-1 rounded-xl">
+                            {[
+                                { id: 'all', label: 'All Surveys' },
+                                { id: 'parent', label: 'Parent' },
+                                { id: 'school_admin', label: 'School Admin' }
+                            ].map((s) => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => handleFilterChange('surveyType', s.id)}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${surveyType === s.id
+                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                                        : 'text-white/40 hover:text-white/60'
+                                    }`}
+                                >
+                                    {s.label}
                                 </button>
                             ))}
                         </div>

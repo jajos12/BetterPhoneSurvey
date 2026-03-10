@@ -14,11 +14,12 @@ interface FilterParams {
     dateFrom: string;
     dateTo: string;
     tags: string;
+    surveyType: string;
 }
 
 async function getResponses(filters: FilterParams) {
     try {
-        const { page, status, search, painCheck, hasVoice, dateFrom, dateTo, tags } = filters;
+        const { page, status, search, painCheck, hasVoice, dateFrom, dateTo, tags, surveyType } = filters;
         const from = (page - 1) * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
@@ -50,6 +51,10 @@ async function getResponses(filters: FilterParams) {
 
         if (status === 'completed') query = query.eq('is_completed', true);
         else if (status === 'ongoing') query = query.eq('is_completed', false);
+
+        if (surveyType && surveyType !== 'all') {
+            query = query.eq('survey_type', surveyType);
+        }
 
         if (search) {
             query = query.or(`email.ilike.%${search}%,session_id.ilike.%${search}%`);
@@ -96,6 +101,7 @@ interface SearchParams {
     dateFrom?: string;
     dateTo?: string;
     tags?: string;
+    surveyType?: string;
 }
 
 export default async function ResponsesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -111,6 +117,7 @@ export default async function ResponsesPage({ searchParams }: { searchParams: Pr
         dateFrom: params.dateFrom || '',
         dateTo: params.dateTo || '',
         tags: params.tags || '',
+        surveyType: params.surveyType || 'all',
     };
 
     const { data: responses, totalCount } = await getResponses(filters);

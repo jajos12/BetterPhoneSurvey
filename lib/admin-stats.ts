@@ -1,173 +1,258 @@
-import { supabaseAdmin } from '@/lib/supabase-server';
-import { STEPS } from '@/config/steps';
-import { ADMIN_STEPS } from '@/config/school-admin-steps'; // You'll need to export this from config
+import { format, startOfDay, subDays } from 'date-fns';
 import { FUNNEL_COLORS } from '@/lib/chart-theme';
-import { format, subDays, startOfDay } from 'date-fns';
-import type { DashboardStats, FunnelStep, UrgencyDistribution, StepDuration } from '@/types/admin';
+import {
+  DEFAULT_ADMIN_SURVEY_VIEW,
+  getAdminSurveyViewDescription,
+  getAdminSurveyViewFromResponse,
+  getAdminSurveyViewLabel,
+  getDefaultStepIdForSurveyView,
+  getVisibleStepsForSurveyView,
+  matchesAdminSurveyView,
+} from '@/lib/admin-survey-utils';
+import { supabaseAdmin } from '@/lib/supabase-server';
+import type { AdminSurveyView, DashboardStats, FunnelStep, StepDuration, UrgencyDistribution } from '@/types/admin';
 
-export async function getDashboardStats(surveyType: 'parent' | 'school_admin' | 'all' = 'parent'): Promise<DashboardStats> {
-    try {
-        // 1. Determine which steps config to use
-        // If 'all', we probably can't do a meaningful funnel unless we combine them or pick one.
-        // For now, if 'all', we might just default to Parent funnel or hide it.
-        // Let's stick to specific types for the funnel.
+type ResponseRow = {
+  session_id: string;
+  email: string | null;
+  current_step: string | null;
+  started_at: string;
+  completed_at: string | null;
+  is_completed: boolean;
+  form_data: Record<string, unknown> | null;
+  survey_type: string | null;
+};
 
-        let stepsConfig = STEPS;
-        if (surveyType === 'school_admin') {
-            stepsConfig = ADMIN_STEPS;
-        }
+type RecordingRow = {
+  extracted_data: Record<string, unknown> | null;
+  session_id: string;
+  duration: number | null;
+};
 
-        // 2. Build Query Filters
-        // Helper to apply survey_type filter
-        const applyFilter = (query: any) => {
-            if (surveyType === 'school_admin') {
-                return query.eq('survey_type', 'school_admin');
-            } else if (surveyType === 'parent') {
-                // Parents are NULL (legacy) or 'parent'
-                return query.or('survey_type.eq.parent,survey_type.is.null');
-            }
-            return query; // 'all' - no filter
-        };
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
 
-        // 3. Execute Queries
-        const [
-            totalResult,
-            completedResult,
-            voiceResult,
-            allResponsesResult,
-            voiceRecordingsResult,
-            recentResult,
-        ] = await Promise.all([
-            applyFilter(supabaseAdmin.from('survey_responses').select('*', { count: 'exact', head: true })),
-            applyFilter(supabaseAdmin.from('survey_responses').select('*', { count: 'exact', head: true }).eq('is_completed', true)),
-            // Voice recordings don't have survey_type directly, but they are linked to sessions. 
-            // We might need to join or just fetch all for now if performance allows, or rely on the response data.
-            // Actually, we can fetch voice recordings that have a corresponding response in the filtered list.
-            // For simplicity/performance in this MVP, we'll fetch all voice recordings and filter in memory 
-            // OR ignore voice recording count filtering if it's expensive (it requires a join).
-            // Let's try to filter by joining if possible, or just exact count.
-            // Supabase COUNT with filter is cheap.
-            supabaseAdmin.from('voice_recordings').select('*', { count: 'exact', head: true }), // optimizing: skipping join for raw count for now
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
 
-            applyFilter(supabaseAdmin.from('survey_responses').select('session_id, current_step, started_at, completed_at, is_completed, form_data')),
+  return chunks;
+}
 
-            // For urgency, we need the extracted data. We'll filter in memory based on the session_ids we get from allResponses.
-            supabaseAdmin.from('voice_recordings').select('extracted_data, session_id, duration').eq('processing_status', 'completed'),
+async function fetchResponsesForView(surveyView: AdminSurveyView): Promise<ResponseRow[]> {
+  let query = supabaseAdmin
+    .from('survey_responses')
+    .select('session_id, email, current_step, started_at, completed_at, is_completed, form_data, survey_type');
 
-            applyFilter(supabaseAdmin.from('survey_responses').select('session_id, email, is_completed, started_at, current_step').order('started_at', { ascending: false }).limit(8)),
-        ]);
+  if (surveyView === 'school_admin') {
+    query = query.eq('survey_type', 'school_admin');
+  } else if (surveyView !== 'all') {
+    query = query.or('survey_type.eq.parent,survey_type.is.null');
+  }
 
-        const totalResponses = totalResult.count || 0;
-        const completedResponses = completedResult.count || 0;
-        const voiceCount = voiceResult.count || 0; // consistent with global
-        const responses = allResponsesResult.data || [];
-        const recordings = voiceRecordingsResult.data || [];
-        const recentResponses = recentResult.data || [];
+  const { data, error } = await query;
+  if (error) {
+    throw error;
+  }
 
-        // Filter recordings to match the fetched responses (since we didn't filter the recordings query)
-        const sessionIds = new Set(responses.map((r: any) => r.session_id));
-        const filteredRecordings = recordings.filter((r: any) => sessionIds.has(r.session_id));
+  return ((data || []) as ResponseRow[]).filter((response) => matchesAdminSurveyView(response, surveyView));
+}
 
+async function fetchCompletedRecordings(sessionIds: string[]): Promise<RecordingRow[]> {
+  if (sessionIds.length === 0) {
+    return [];
+  }
 
-        // 4. Build Funnel
-        const surveySteps = stepsConfig.filter(s => s.id !== 'thank-you');
-        const stepCounts = new Map<string, number>();
-        for (const step of surveySteps) stepCounts.set(step.id, 0);
+  const recordingChunks = await Promise.all(
+    chunkArray(sessionIds, 200).map(async (chunk) => {
+      const { data, error } = await supabaseAdmin
+        .from('voice_recordings')
+        .select('extracted_data, session_id, duration')
+        .eq('processing_status', 'completed')
+        .in('session_id', chunk);
 
-        for (const r of responses) {
-            const currentStep = r.current_step || (surveyType === 'school_admin' ? 'disruption-gate' : 'pain-check'); // Default start step
-            const currentIdx = surveySteps.findIndex(s => s.id === currentStep);
+      if (error) {
+        throw error;
+      }
 
-            if (currentIdx !== -1) {
-                // Count user in all steps up to and including their current step
-                for (let i = 0; i <= currentIdx; i++) {
-                    const stepId = surveySteps[i].id;
-                    stepCounts.set(stepId, (stepCounts.get(stepId) || 0) + 1);
-                }
-            }
+      return (data || []) as RecordingRow[];
+    })
+  );
 
-            // If completed, ensure they count for all steps
-            if (r.is_completed) {
-                for (const step of surveySteps) {
-                    stepCounts.set(step.id, Math.max(stepCounts.get(step.id) || 0, (stepCounts.get(step.id) || 0))); // Wait, if they are completed they should be in all.
-                    // Actually, the loop above handles it if current_step is the last one.
-                    // But if current_step is wacky, force it.
-                }
-            }
-        }
+  return recordingChunks.flat();
+}
 
-        const funnel: FunnelStep[] = surveySteps.map((step, i) => ({
-            step: step.title.length > 25 ? step.title.substring(0, 25) + '...' : step.title,
-            stepId: step.id,
-            count: stepCounts.get(step.id) || 0,
-            color: FUNNEL_COLORS[i % FUNNEL_COLORS.length],
-        }));
+function buildFunnel(responses: ResponseRow[], surveyView: AdminSurveyView): FunnelStep[] {
+  if (surveyView === 'all') {
+    return [];
+  }
 
+  const surveySteps = getVisibleStepsForSurveyView(surveyView);
+  const defaultStart = getDefaultStepIdForSurveyView(surveyView);
+  const stepCounts = new Map<string, number>(surveySteps.map((step) => [step.id, 0]));
 
-        // 5. Urgency Analysis
-        const urgency: UrgencyDistribution = { low: 0, medium: 0, high: 0, critical: 0, dominant: 'low', dominantPct: 0 };
-        let urgencyTotal = 0;
-        for (const rec of filteredRecordings) {
-            const data = rec.extracted_data as Record<string, unknown> | null;
-            if (!data) continue;
-            const level = (data.urgency_level as number) || (data.emotional_intensity as number);
-            if (typeof level !== 'number') continue;
-            urgencyTotal++;
-            if (level >= 9) urgency.critical++;
-            else if (level >= 7) urgency.high++;
-            else if (level >= 4) urgency.medium++;
-            else urgency.low++;
-        }
-        if (urgencyTotal > 0) {
-            const entries = Object.entries({ low: urgency.low, medium: urgency.medium, high: urgency.high, critical: urgency.critical });
-            const [dominant, dominantCount] = entries.reduce((a, b) => b[1] > a[1] ? b : a);
-            urgency.dominant = dominant as any;
-            urgency.dominantPct = Math.round((dominantCount / urgencyTotal) * 100);
-        }
+  for (const response of responses) {
+    if (response.is_completed || response.current_step === 'thank-you') {
+      for (const step of surveySteps) {
+        stepCounts.set(step.id, (stepCounts.get(step.id) || 0) + 1);
+      }
+      continue;
+    }
 
+    const currentStep =
+      response.current_step && response.current_step !== 'unknown' && response.current_step !== 'intro'
+        ? response.current_step
+        : defaultStart;
+    const currentIndex = surveySteps.findIndex((step) => step.id === currentStep);
 
-        // 6. Time Series
-        const now = new Date();
-        const daily: Array<{ date: string; started: number; completed: number }> = [];
-        const completionRate: Array<{ date: string; rate: number }> = [];
-        for (let i = 29; i >= 0; i--) {
-            const day = startOfDay(subDays(now, i));
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const dayLabel = format(day, 'MMM dd');
-            const started = responses.filter((r: any) => format(startOfDay(new Date(r.started_at)), 'yyyy-MM-dd') === dateStr).length;
-            const completed = responses.filter((r: any) => r.completed_at && format(startOfDay(new Date(r.completed_at)), 'yyyy-MM-dd') === dateStr).length;
-            daily.push({ date: dayLabel, started, completed });
-            completionRate.push({ date: dayLabel, rate: started > 0 ? Math.round((completed / started) * 100) : 0 });
-        }
+    if (currentIndex === -1) {
+      continue;
+    }
 
-        // 7. Step Durations
-        const stepDurations: StepDuration[] = surveySteps.slice(0, 12).map((step, i) => {
-            const reachedCount = stepCounts.get(step.id) || 0;
-            const nextStep = surveySteps[i + 1];
-            const nextCount = nextStep ? (stepCounts.get(nextStep.id) || 0) : completedResponses;
-            const dropOff = reachedCount > 0 ? Math.round(((reachedCount - nextCount) / reachedCount) * 100) : 0;
-            return {
-                stepId: step.id,
-                stepName: step.title.length > 20 ? step.title.substring(0, 20) + '...' : step.title,
-                avgDurationSeconds: 0,
-                dropOffPct: Math.max(0, dropOff),
-            };
-        });
+    for (let index = 0; index <= currentIndex; index += 1) {
+      const stepId = surveySteps[index].id;
+      stepCounts.set(stepId, (stepCounts.get(stepId) || 0) + 1);
+    }
+  }
+
+  return surveySteps.map((step, index) => ({
+    step: step.title.length > 32 ? `${step.title.slice(0, 32)}...` : step.title,
+    stepId: step.id,
+    count: stepCounts.get(step.id) || 0,
+    color: FUNNEL_COLORS[index % FUNNEL_COLORS.length],
+  }));
+}
+
+function buildStepDurations(funnel: FunnelStep[]): StepDuration[] {
+  return funnel.map((step, index) => {
+    const reachedCount = step.count;
+    const nextCount = funnel[index + 1]?.count ?? 0;
+    const dropOff = reachedCount > 0 ? Math.round(((reachedCount - nextCount) / reachedCount) * 100) : 0;
+
+    return {
+      stepId: step.stepId,
+      stepName: step.step.length > 24 ? `${step.step.slice(0, 24)}...` : step.step,
+      avgDurationSeconds: 0,
+      dropOffPct: Math.max(0, dropOff),
+    };
+  });
+}
+
+function buildUrgency(recordings: RecordingRow[]): UrgencyDistribution {
+  const urgency: UrgencyDistribution = {
+    low: 0,
+    medium: 0,
+    high: 0,
+    critical: 0,
+    dominant: 'low',
+    dominantPct: 0,
+  };
+
+  let urgencyTotal = 0;
+  for (const recording of recordings) {
+    const data = recording.extracted_data;
+    if (!data) {
+      continue;
+    }
+
+    const level = (data.urgency_level as number) || (data.emotional_intensity as number);
+    if (typeof level !== 'number') {
+      continue;
+    }
+
+    urgencyTotal += 1;
+    if (level >= 9) urgency.critical += 1;
+    else if (level >= 7) urgency.high += 1;
+    else if (level >= 4) urgency.medium += 1;
+    else urgency.low += 1;
+  }
+
+  if (urgencyTotal > 0) {
+    const [dominant, dominantCount] = Object.entries({
+      low: urgency.low,
+      medium: urgency.medium,
+      high: urgency.high,
+      critical: urgency.critical,
+    }).reduce((currentMax, next) => (next[1] > currentMax[1] ? next : currentMax));
+
+    urgency.dominant = dominant;
+    urgency.dominantPct = Math.round((dominantCount / urgencyTotal) * 100);
+  }
+
+  return urgency;
+}
+
+export async function getDashboardStats(
+  surveyView: AdminSurveyView = DEFAULT_ADMIN_SURVEY_VIEW
+): Promise<DashboardStats> {
+  try {
+    const responses = await fetchResponsesForView(surveyView);
+    const totalResponses = responses.length;
+    const completedResponses = responses.filter((response) => response.is_completed).length;
+    const recordings = await fetchCompletedRecordings(responses.map((response) => response.session_id));
+    const urgency = buildUrgency(recordings);
+    const funnel = buildFunnel(responses, surveyView);
+    const now = new Date();
+
+    const daily: Array<{ date: string; started: number; completed: number }> = [];
+    const completionRate: Array<{ date: string; rate: number }> = [];
+
+    for (let index = 29; index >= 0; index -= 1) {
+      const day = startOfDay(subDays(now, index));
+      const dateKey = format(day, 'yyyy-MM-dd');
+      const label = format(day, 'MMM dd');
+      const started = responses.filter(
+        (response) => format(startOfDay(new Date(response.started_at)), 'yyyy-MM-dd') === dateKey
+      ).length;
+      const completed = responses.filter(
+        (response) =>
+          !!response.completed_at &&
+          format(startOfDay(new Date(response.completed_at)), 'yyyy-MM-dd') === dateKey
+      ).length;
+
+      daily.push({ date: label, started, completed });
+      completionRate.push({
+        date: label,
+        rate: started > 0 ? Math.round((completed / started) * 100) : 0,
+      });
+    }
+
+    const recentResponses = [...responses]
+      .sort((left, right) => new Date(right.started_at).getTime() - new Date(left.started_at).getTime())
+      .slice(0, 8)
+      .map((response) => {
+        const responseView = getAdminSurveyViewFromResponse(response);
 
         return {
-            totalResponses,
-            completedResponses,
-            voiceRecordings: voiceCount, // This is total voice, not filtered. Accepted for MVP.
-            completionRate: totalResponses > 0 ? Math.round((completedResponses / totalResponses) * 100) : 0,
-            funnel,
-            urgency,
-            timeSeries: { daily, completionRate },
-            stepDurations,
-            recentResponses,
+          session_id: response.session_id,
+          email: response.email,
+          is_completed: response.is_completed,
+          started_at: response.started_at,
+          current_step: response.current_step || getDefaultStepIdForSurveyView(responseView),
+          surveyView: responseView,
+          surveyLabel: getAdminSurveyViewLabel(responseView),
         };
+      });
 
-    } catch (error) {
-        console.error('Failed to fetch stats:', error);
-        throw error;
-    }
+    return {
+      surveyView,
+      surveyLabel: getAdminSurveyViewLabel(surveyView),
+      surveyDescription: getAdminSurveyViewDescription(surveyView),
+      totalResponses,
+      completedResponses,
+      voiceRecordings: recordings.length,
+      completionRate: totalResponses > 0 ? Math.round((completedResponses / totalResponses) * 100) : 0,
+      funnel,
+      urgency,
+      timeSeries: {
+        daily,
+        completionRate,
+      },
+      stepDurations: buildStepDurations(funnel),
+      recentResponses,
+    };
+  } catch (error) {
+    console.error('Failed to fetch stats:', error);
+    throw error;
+  }
 }

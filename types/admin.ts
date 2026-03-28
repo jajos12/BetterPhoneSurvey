@@ -1,5 +1,8 @@
 import type { PainCheckValue } from './survey';
 
+export type ParentSurveyVariant = 'long_form' | 'condensed_v6';
+export type AdminSurveyView = 'all' | 'parent_long' | 'parent_condensed' | 'school_admin';
+
 // Dashboard stats
 export interface FunnelStep {
   step: string;
@@ -28,6 +31,8 @@ export interface RecentResponse {
   is_completed: boolean;
   started_at: string;
   current_step: string;
+  surveyView?: Exclude<AdminSurveyView, 'all'>;
+  surveyLabel?: string;
 }
 
 export interface StepDuration {
@@ -38,6 +43,9 @@ export interface StepDuration {
 }
 
 export interface DashboardStats {
+  surveyView: AdminSurveyView;
+  surveyLabel: string;
+  surveyDescription: string;
   totalResponses: number;
   completedResponses: number;
   voiceRecordings: number;
@@ -147,6 +155,8 @@ export interface ComparisonData {
   sessionId: string;
   email: string;
   isCompleted: boolean;
+  surveyView: Exclude<AdminSurveyView, 'all'>;
+  surveyLabel: string;
   painCheck: string | null;
   issues: string[];
   ranking: string[];

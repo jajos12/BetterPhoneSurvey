@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { SchoolAdminFormData } from '@/types/school-admin';
 import { getSessionId } from '@/lib/utils';
 
@@ -14,37 +14,34 @@ interface SchoolAdminContextType {
 const SchoolAdminContext = createContext<SchoolAdminContextType | null>(null);
 
 const STORAGE_KEY = 'betterphone_school_admin_data';
+const SESSION_KEY = 'betterphone_school_admin_session_id';
 
 export function SchoolAdminProvider({ children }: { children: ReactNode }) {
-    const [sessionId, setSessionId] = useState('');
-    const [formData, setFormData] = useState<Partial<SchoolAdminFormData>>({ surveyType: 'school_admin' });
-    const [isLoading, setIsLoading] = useState(true);
-    const sessionCreatedRef = useRef(false);
-
-    // Load session on mount
-    useEffect(() => {
-        // Use a separate prefix for school admin sessions
-        const sid = getSessionId('school_admin_');
-        setSessionId(sid);
+    const [sessionId] = useState(() => getSessionId('school_admin_', SESSION_KEY));
+    const [formData, setFormData] = useState<Partial<SchoolAdminFormData>>(() => {
+        if (typeof window === 'undefined') {
+            return { surveyType: 'school_admin' };
+        }
 
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
-                setFormData({ ...JSON.parse(saved), surveyType: 'school_admin' });
+                return { ...JSON.parse(saved), surveyType: 'school_admin' };
             } catch (e) {
                 console.error('Failed to parse saved school admin data:', e);
             }
         }
-        setIsLoading(false);
-    }, []);
+        return { surveyType: 'school_admin' };
+    });
+    const [isLoading] = useState(false);
 
     // Create database record on session init
     useEffect(() => {
-        if (!sessionId || sessionCreatedRef.current) return;
+        if (!sessionId) return;
 
         const createSession = async () => {
             try {
-                const response = await fetch('/api/save', {
+                await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -55,15 +52,12 @@ export function SchoolAdminProvider({ children }: { children: ReactNode }) {
                     }),
                 });
 
-                if (response.ok) {
-                    sessionCreatedRef.current = true;
-                }
             } catch (err) {
                 console.error('Failed to create school admin session:', err);
             }
         };
 
-        createSession();
+        void createSession();
     }, [sessionId]);
 
     // Persist to localStorage

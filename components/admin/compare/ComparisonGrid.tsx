@@ -51,11 +51,16 @@ export default function ComparisonGrid({ responses }: ComparisonGridProps) {
                 </div>
               </div>
               <div className="mt-2">
-                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                  r.isCompleted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-orange-500/10 text-orange-400'
-                }`}>
-                  {r.isCompleted ? 'Complete' : 'Ongoing'}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                    r.isCompleted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-orange-500/10 text-orange-400'
+                  }`}>
+                    {r.isCompleted ? 'Complete' : 'Ongoing'}
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 text-white/40 border border-white/10">
+                    {r.surveyLabel}
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -64,7 +69,7 @@ export default function ComparisonGrid({ responses }: ComparisonGridProps) {
 
       <div className={`grid ${gridCols}`}>
         {/* Pain Check */}
-        <SectionHeader title="Pain Check" />
+        <SectionHeader title="Initial Qualification" />
         {responses.map((r, i) => (
           <div key={`pain-${r.sessionId}`} className={`p-5 ${i > 0 ? 'border-l border-white/5' : ''}`}>
             <span className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider ${
@@ -101,7 +106,7 @@ export default function ComparisonGrid({ responses }: ComparisonGridProps) {
         ))}
 
         {/* Benefits */}
-        <SectionHeader title="Desired Benefits" />
+        <SectionHeader title="Desired Benefits / Outcomes" />
         {responses.map((r, i) => (
           <div key={`benefits-${r.sessionId}`} className={`p-5 ${i > 0 ? 'border-l border-white/5' : ''}`}>
             <div className="flex flex-wrap gap-1.5">
@@ -176,7 +181,8 @@ export default function ComparisonGrid({ responses }: ComparisonGridProps) {
         {/* Demographics */}
         <SectionHeader title="Demographics" />
         {responses.map((r, i) => {
-          const fd = r.formData as Record<string, any>;
+          const fd = r.formData as Record<string, unknown>;
+          const priceRanges = Array.isArray(fd?.priceWillingness) ? (fd.priceWillingness as string[]) : [];
           return (
             <div key={`demo-${r.sessionId}`} className={`p-5 space-y-3 ${i > 0 ? 'border-l border-white/5' : ''}`}>
               <div className="grid grid-cols-2 gap-3">
@@ -197,11 +203,11 @@ export default function ComparisonGrid({ responses }: ComparisonGridProps) {
                   <p className="text-xs font-bold text-white/60">{fd?.deviceDuration || '—'}</p>
                 </div>
               </div>
-              {fd?.priceWillingness && (
+              {priceRanges.length > 0 && (
                 <div>
                   <p className="text-[9px] font-black text-white/20 uppercase mb-1">Price Range</p>
                   <div className="flex flex-wrap gap-1">
-                    {(fd.priceWillingness as string[]).map((p, pi) => (
+                    {priceRanges.map((p, pi) => (
                       <span key={pi} className="text-[10px] px-2 py-0.5 bg-white/5 border border-white/5 rounded-md text-white/50 font-medium">{p}</span>
                     ))}
                   </div>

@@ -3,24 +3,53 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase-client';
+import {
+  ADMIN_SURVEY_VIEW_OPTIONS,
+  DEFAULT_ADMIN_SURVEY_VIEW,
+} from '@/lib/admin-survey-utils';
 import AreaTimeChart from '@/components/admin/charts/AreaTimeChart';
 import FunnelBar from '@/components/admin/charts/FunnelBar';
 import PieDonut from '@/components/admin/charts/PieDonut';
 import HeatmapGrid from '@/components/admin/charts/HeatmapGrid';
 import { CHART_COLORS, URGENCY_COLORS } from '@/lib/chart-theme';
-import type { DashboardStats, RecentResponse } from '@/types/admin';
+import type { AdminSurveyView, DashboardStats, RecentResponse } from '@/types/admin';
 
 interface DashboardClientProps {
   initialStats: DashboardStats;
 }
 
+type DashboardView = Exclude<AdminSurveyView, 'all'>;
+
+const VIEW_ACCENTS: Record<
+  DashboardView,
+  {
+    rail: string;
+    active: string;
+  }
+> = {
+  parent_condensed: {
+    rail: 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.45)]',
+    active: 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50',
+  },
+  parent_long: {
+    rail: 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.45)]',
+    active: 'bg-blue-600 text-white shadow-lg shadow-blue-900/50',
+  },
+  school_admin: {
+    rail: 'bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.45)]',
+    active: 'bg-cyan-600 text-white shadow-lg shadow-cyan-900/50',
+  },
+};
+
 export default function DashboardClient({ initialStats }: DashboardClientProps) {
   const [stats, setStats] = useState<DashboardStats>(initialStats);
   const [isLive, setIsLive] = useState(false);
-  const [view, setView] = useState<'parent' | 'school_admin'>('parent');
+  const [view, setView] = useState<DashboardView>(
+    initialStats.surveyView === 'all' ? DEFAULT_ADMIN_SURVEY_VIEW : (initialStats.surveyView as DashboardView)
+  );
   const [isLoading, setIsLoading] = useState(false);
 
-  const refreshStats = useCallback(async (type?: 'parent' | 'school_admin') => {
+  const refreshStats = useCallback(async (type?: DashboardView) => {
     const targetType = type || view;
     // Don't set loading on background refresh, only on manual toggle
     try {
@@ -36,7 +65,7 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
   }, [view]);
 
   // Handle toggle change
-  const handleViewChange = (newView: 'parent' | 'school_admin') => {
+  const handleViewChange = (newView: DashboardView) => {
     if (newView === view) return;
     setView(newView);
     setIsLoading(true);
@@ -55,7 +84,9 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
           if (status === 'SUBSCRIBED') setIsLive(true);
           else if (status === 'CHANNEL_ERROR') setIsLive(false);
         });
-    } catch (e) { setIsLive(false); }
+    } catch {
+      channel = null;
+    }
 
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [refreshStats]);
@@ -74,14 +105,14 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
   ];
 
   const urgencyDominantColor = URGENCY_COLORS[stats.urgency.dominant as keyof typeof URGENCY_COLORS] || URGENCY_COLORS.low;
-  const accentColor = view === 'school_admin' ? 'cyan' : 'blue';
+  const accent = VIEW_ACCENTS[view];
 
   return (
     <div className={`space-y-10 ${isLoading ? 'opacity-70 pointer-events-none transition-opacity' : ''}`}>
       {/* Header */}
       <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <div className={`absolute -left-10 top-0 h-full w-1 ${view === 'school_admin' ? 'bg-cyan-500' : 'bg-white'} rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-colors`} />
+          <div className={`absolute -left-10 top-0 h-full w-1 rounded-full transition-colors ${accent.rail}`} />
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-4xl font-extrabold text-white tracking-tight">Command Center</h1>
             {isLive && (
@@ -91,29 +122,22 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
               </span>
             )}
           </div>
-          <p className="text-white/50 font-medium tracking-wide">Real-time intelligence from {view === 'parent' ? 'parent families' : 'school administrators'}</p>
+          <p className="text-white/50 font-medium tracking-wide">{stats.surveyDescription}</p>
         </div>
 
         {/* View Toggle */}
         <div className="bg-[#0c0c0c] border border-white/10 p-1 rounded-xl flex">
-          <button
-            onClick={() => handleViewChange('parent')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'parent'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
-              : 'text-white/40 hover:text-white hover:bg-white/5'
+          {ADMIN_SURVEY_VIEW_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              onClick={() => handleViewChange(option.id)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                view === option.id ? VIEW_ACCENTS[option.id].active : 'text-white/40 hover:text-white hover:bg-white/5'
               }`}
-          >
-            Parents
-          </button>
-          <button
-            onClick={() => handleViewChange('school_admin')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'school_admin'
-              ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-900/50'
-              : 'text-white/40 hover:text-white hover:bg-white/5'
-              }`}
-          >
-            School Admins
-          </button>
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -211,11 +235,11 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
 
           {/* Recent Activity */}
           <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl overflow-hidden">
-            <div className="p-5 border-b border-white/5 flex justify-between items-center">
-              <h3 className="text-xs font-black text-white uppercase tracking-widest">Recent Activity</h3>
-              <Link href="/admin/responses" className="text-[10px] font-bold text-white/30 hover:text-white transition-colors">ALL &rarr;</Link>
-            </div>
-            <div className="divide-y divide-white/5">
+          <div className="p-5 border-b border-white/5 flex justify-between items-center">
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">Recent Activity</h3>
+            <Link href="/admin/responses" className="text-[10px] font-bold text-white/30 hover:text-white transition-colors">ALL &rarr;</Link>
+          </div>
+          <div className="divide-y divide-white/5">
               {stats.recentResponses.map((res: RecentResponse) => (
                 <Link key={res.session_id} href={`/admin/responses/${res.session_id}`} className="flex items-center gap-3 p-4 hover:bg-white/5 transition-colors group">
                   <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20">
@@ -223,9 +247,16 @@ export default function DashboardClient({ initialStats }: DashboardClientProps) 
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">{res.email || 'Anonymous Collector'}</p>
-                    <p className="text-[10px] text-white/20 font-mono italic">
-                      {new Date(res.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] text-white/20 font-mono italic">
+                        {new Date(res.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      {res.surveyLabel && (
+                        <span className="text-[9px] font-black uppercase tracking-wider text-white/35">
+                          {res.surveyLabel}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className={`w-1.5 h-1.5 rounded-full ${res.is_completed ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                 </Link>

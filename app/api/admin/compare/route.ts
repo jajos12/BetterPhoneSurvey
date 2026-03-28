@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
+import { getAdminSurveyViewFromResponse, getAdminSurveyViewLabel } from '@/lib/admin-survey-utils';
 import { requireAdminAuthFromRequest } from '@/lib/admin-auth';
 import type { ComparisonData } from '@/types/admin';
 
@@ -35,11 +36,14 @@ export async function POST(request: NextRequest) {
         if (!response) return null;
 
         const formData = response.form_data || {};
+        const surveyView = getAdminSurveyViewFromResponse(response);
 
         const comparison: ComparisonData = {
           sessionId: response.session_id,
           email: response.email || formData.email || 'Anonymous',
           isCompleted: response.is_completed,
+          surveyView,
+          surveyLabel: getAdminSurveyViewLabel(surveyView),
           painCheck: formData.painCheck || null,
           issues: formData.issues || [],
           ranking: formData.ranking || [],

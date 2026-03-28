@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import { normalizeAdminSurveyView } from '@/lib/admin-survey-utils';
 import { getDashboardStats } from '@/lib/admin-stats';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type') as 'parent' | 'school_admin' | 'all' || 'parent';
+  const type = normalizeAdminSurveyView(searchParams.get('type'));
 
   try {
     const stats = await getDashboardStats(type);

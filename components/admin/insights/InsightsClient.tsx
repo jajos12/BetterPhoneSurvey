@@ -1,12 +1,88 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import PieDonut from '@/components/admin/charts/PieDonut';
+import { useEffect, useState } from 'react';
+import {
+  ADMIN_SURVEY_VIEW_OPTIONS,
+  DEFAULT_ADMIN_SURVEY_VIEW,
+  getAdminSurveyAudienceLabel,
+} from '@/lib/admin-survey-utils';
 import BarHorizontal from '@/components/admin/charts/BarHorizontal';
-import InsightsSkeleton from './InsightsSkeleton';
+import PieDonut from '@/components/admin/charts/PieDonut';
 import { useToast } from '@/components/admin/ui/Toast';
-import { SENTIMENT_COLORS, URGENCY_COLORS, FUNNEL_COLORS } from '@/lib/chart-theme';
-import type { AIInsights } from '@/types/admin';
+import InsightsSkeleton from './InsightsSkeleton';
+import { FUNNEL_COLORS, SENTIMENT_COLORS, URGENCY_COLORS } from '@/lib/chart-theme';
+import type { AdminSurveyView, AIInsights } from '@/types/admin';
+
+type InsightsView = Exclude<AdminSurveyView, 'all'>;
+
+const VIEW_ACCENTS: Record<
+  InsightsView,
+  {
+    text: string;
+    bg: string;
+    border: string;
+    badgeBg: string;
+    badgeBorder: string;
+    iconBg: string;
+    iconBorder: string;
+    active: string;
+  }
+> = {
+  parent_condensed: {
+    text: 'text-emerald-400',
+    bg: 'bg-emerald-500',
+    border: 'border-emerald-500',
+    badgeBg: 'bg-emerald-500/20',
+    badgeBorder: 'border-emerald-500/30',
+    iconBg: 'bg-emerald-500/10',
+    iconBorder: 'border-emerald-500/20',
+    active: 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50',
+  },
+  parent_long: {
+    text: 'text-blue-400',
+    bg: 'bg-blue-500',
+    border: 'border-blue-500',
+    badgeBg: 'bg-blue-500/20',
+    badgeBorder: 'border-blue-500/30',
+    iconBg: 'bg-blue-500/10',
+    iconBorder: 'border-blue-500/20',
+    active: 'bg-blue-600 text-white shadow-lg shadow-blue-900/50',
+  },
+  school_admin: {
+    text: 'text-cyan-400',
+    bg: 'bg-cyan-500',
+    border: 'border-cyan-500',
+    badgeBg: 'bg-cyan-500/20',
+    badgeBorder: 'border-cyan-500/30',
+    iconBg: 'bg-cyan-500/10',
+    iconBorder: 'border-cyan-500/20',
+    active: 'bg-cyan-600 text-white shadow-lg shadow-cyan-900/50',
+  },
+};
+
+function ViewToggle({
+  view,
+  onChange,
+}: {
+  view: InsightsView;
+  onChange: (view: InsightsView) => void;
+}) {
+  return (
+    <div className="bg-[#0c0c0c] border border-white/10 p-1 rounded-xl flex">
+      {ADMIN_SURVEY_VIEW_OPTIONS.map((option) => (
+        <button
+          key={option.id}
+          onClick={() => onChange(option.id)}
+          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+            view === option.id ? VIEW_ACCENTS[option.id].active : 'text-white/40 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function InsightsClient() {
   const { toast } = useToast();
@@ -17,29 +93,32 @@ export default function InsightsClient() {
   const [isStale, setIsStale] = useState(false);
   const [responseCount, setResponseCount] = useState(0);
   const [expandedThemes, setExpandedThemes] = useState<Set<number>>(new Set());
-  const [view, setView] = useState<'parent' | 'school_admin'>('parent');
+  const [view, setView] = useState<InsightsView>(DEFAULT_ADMIN_SURVEY_VIEW);
 
-  // Fetch cached insights on load or view change
   useEffect(() => {
-    fetchCachedInsights(view);
+    void fetchCachedInsights(view);
   }, [view]);
 
-  const fetchCachedInsights = async (type: 'parent' | 'school_admin') => {
+  const fetchCachedInsights = async (targetView: InsightsView) => {
     setLoading(true);
-    setInsights(null); // Reset while loading
+    setInsights(null);
+
     try {
-      const res = await fetch(`/api/admin/insights?type=${type}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.insights) {
-          setInsights(data.insights);
-          setGeneratedAt(data.generatedAt || data.insights.generatedAt);
-          setIsStale(data.stale || false);
-        }
-        setResponseCount(data.responseCount || 0);
+      const response = await fetch(`/api/admin/insights?type=${targetView}`);
+      if (!response.ok) {
+        return;
       }
+
+      const data = await response.json();
+      if (data.insights) {
+        setInsights(data.insights);
+        setGeneratedAt(data.generatedAt || data.insights.generatedAt);
+        setIsStale(data.stale || false);
+      }
+
+      setResponseCount(data.responseCount || 0);
     } catch {
-      // Silent fail — show empty state
+      // Intentionally silent so the empty state can render.
     } finally {
       setLoading(false);
     }
@@ -47,21 +126,23 @@ export default function InsightsClient() {
 
   const generateInsights = async () => {
     setGenerating(true);
+
     try {
-      const res = await fetch(`/api/admin/insights?type=${view}`, {
+      const response = await fetch(`/api/admin/insights?type=${view}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      if (res.ok) {
-        const data = await res.json();
+
+      if (response.ok) {
+        const data = await response.json();
         setInsights(data.insights);
         setGeneratedAt(data.insights?.generatedAt || new Date().toISOString());
         setIsStale(false);
         setResponseCount(data.responseCount || 0);
         toast('Insights generated successfully', 'success');
       } else {
-        const err = await res.json();
-        toast(err.error || 'Failed to generate insights', 'error');
+        const error = await response.json();
+        toast(error.error || 'Failed to generate insights', 'error');
       }
     } catch {
       toast('Network error while generating insights', 'error');
@@ -71,77 +152,77 @@ export default function InsightsClient() {
   };
 
   const toggleTheme = (index: number) => {
-    setExpandedThemes(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
+    setExpandedThemes((current) => {
+      const next = new Set(current);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
       return next;
     });
   };
 
-  const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+  const formatTimeAgo = (dateString: string) => {
+    const diff = Date.now() - new Date(dateString).getTime();
     const minutes = Math.floor(diff / 60000);
+
     if (minutes < 1) return 'just now';
     if (minutes < 60) return `${minutes}m ago`;
+
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}h ago`;
+
     return `${Math.floor(hours / 24)}d ago`;
   };
 
-  const accentColor = view === 'school_admin' ? 'cyan' : 'blue';
-  const accentText = view === 'school_admin' ? 'text-cyan-400' : 'text-blue-400';
-  const accentBg = view === 'school_admin' ? 'bg-cyan-500' : 'bg-blue-500';
-  const accentBorder = view === 'school_admin' ? 'border-cyan-500' : 'border-blue-500';
+  const accent = VIEW_ACCENTS[view];
+  const audienceLabel = getAdminSurveyAudienceLabel(view);
 
-  if (loading) return <InsightsSkeleton />;
+  if (loading) {
+    return <InsightsSkeleton />;
+  }
 
-  // Empty state — no insights generated yet
   if (!insights) {
     return (
       <div className="space-y-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className={`w-2 h-8 ${accentBg} rounded-full transition-colors`} />
+              <div className={`w-2 h-8 ${accent.bg} rounded-full transition-colors`} />
               <h1 className="text-4xl font-extrabold text-white tracking-widest uppercase">AI Insights</h1>
-              <span className={`text-[9px] font-black ${accentBg}/20 border ${accentBorder}/30 ${accentText} px-2 py-0.5 rounded-full uppercase tracking-widest transition-colors`}>AI</span>
+              <span
+                className={`text-[9px] font-black ${accent.badgeBg} border ${accent.badgeBorder} ${accent.text} px-2 py-0.5 rounded-full uppercase tracking-widest transition-colors`}
+              >
+                AI
+              </span>
             </div>
             <p className="text-white/40 font-medium tracking-wide">
-              Aggregate intelligence from {view === 'parent' ? 'parent families' : 'school administrators'}
+              Aggregate intelligence from {audienceLabel}
             </p>
           </div>
 
-          <div className="bg-[#0c0c0c] border border-white/10 p-1 rounded-xl flex">
-            <button
-              onClick={() => setView('parent')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'parent' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-            >
-              Parents
-            </button>
-            <button
-              onClick={() => setView('school_admin')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'school_admin' ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-900/50' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-            >
-              School Admins
-            </button>
-          </div>
+          <ViewToggle view={view} onChange={setView} />
         </div>
 
         <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-16 text-center">
-          <div className={`w-20 h-20 ${accentBg}/10 border ${accentBorder}/20 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-colors`}>
-            <svg className={`w-10 h-10 ${accentText}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div
+            className={`w-20 h-20 ${accent.iconBg} border ${accent.iconBorder} rounded-2xl flex items-center justify-center mx-auto mb-6 transition-colors`}
+          >
+            <svg className={`w-10 h-10 ${accent.text}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
             </svg>
           </div>
           <h3 className="text-white font-bold text-xl mb-2">Generate AI Insights</h3>
           <p className="text-white/30 text-sm font-medium mb-8 max-w-md mx-auto">
-            Analyze {responseCount} {view === 'parent' ? 'parent' : 'admin'} response{responseCount !== 1 ? 's' : ''} to uncover sentiment patterns, key themes, urgency distribution, and actionable recommendations.
+            Analyze {responseCount} {audienceLabel} to uncover sentiment patterns, key themes, urgency distribution, and actionable recommendations.
           </p>
           <button
             onClick={generateInsights}
             disabled={generating}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 ${isStale ? 'bg-amber-500 text-black animate-pulse' : 'bg-white text-black'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 ${
+              isStale ? 'bg-amber-500 text-black animate-pulse' : 'bg-white text-black'
+            }`}
           >
             {generating ? (
               <span className="flex items-center gap-2">
@@ -151,70 +232,66 @@ export default function InsightsClient() {
                 </svg>
                 Analyzing...
               </span>
-            ) : 'Generate Insights'}
+            ) : (
+              'Generate Insights'
+            )}
           </button>
         </div>
       </div>
     );
   }
 
-  // Build chart data
   const sentimentData = insights.sentiment?.distribution
     ? [
-      { name: 'Positive', value: insights.sentiment.distribution.positive, color: SENTIMENT_COLORS.positive },
-      { name: 'Neutral', value: insights.sentiment.distribution.neutral, color: SENTIMENT_COLORS.neutral },
-      { name: 'Negative', value: insights.sentiment.distribution.negative, color: SENTIMENT_COLORS.negative },
-    ]
+        { name: 'Positive', value: insights.sentiment.distribution.positive, color: SENTIMENT_COLORS.positive },
+        { name: 'Neutral', value: insights.sentiment.distribution.neutral, color: SENTIMENT_COLORS.neutral },
+        { name: 'Negative', value: insights.sentiment.distribution.negative, color: SENTIMENT_COLORS.negative },
+      ]
     : [];
 
   const urgencyData = insights.urgencyDistribution
     ? [
-      { name: 'Low', value: insights.urgencyDistribution.low, color: URGENCY_COLORS.low },
-      { name: 'Medium', value: insights.urgencyDistribution.medium, color: URGENCY_COLORS.medium },
-      { name: 'High', value: insights.urgencyDistribution.high, color: URGENCY_COLORS.high },
-      { name: 'Critical', value: insights.urgencyDistribution.critical, color: URGENCY_COLORS.critical },
-    ]
+        { name: 'Low', value: insights.urgencyDistribution.low, color: URGENCY_COLORS.low },
+        { name: 'Medium', value: insights.urgencyDistribution.medium, color: URGENCY_COLORS.medium },
+        { name: 'High', value: insights.urgencyDistribution.high, color: URGENCY_COLORS.high },
+        { name: 'Critical', value: insights.urgencyDistribution.critical, color: URGENCY_COLORS.critical },
+      ]
     : [];
 
-  const themeData = (insights.themes || []).map((t, i) => ({
-    name: t.theme.length > 30 ? t.theme.substring(0, 30) + '...' : t.theme,
-    value: t.count,
-    color: FUNNEL_COLORS[i % FUNNEL_COLORS.length],
+  const themeData = (insights.themes || []).map((theme, index) => ({
+    name: theme.theme.length > 30 ? `${theme.theme.slice(0, 30)}...` : theme.theme,
+    value: theme.count,
+    color: FUNNEL_COLORS[index % FUNNEL_COLORS.length],
   }));
 
   const metrics = insights.keyMetrics;
-  const urgencyColor = (metrics?.avgUrgency || 0) >= 7 ? 'text-red-400' : (metrics?.avgUrgency || 0) >= 4 ? 'text-orange-400' : 'text-emerald-400';
+  const urgencyColor =
+    (metrics?.avgUrgency || 0) >= 7
+      ? 'text-red-400'
+      : (metrics?.avgUrgency || 0) >= 4
+      ? 'text-orange-400'
+      : 'text-emerald-400';
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className={`w-2 h-8 ${accentBg} rounded-full transition-colors`} />
+            <div className={`w-2 h-8 ${accent.bg} rounded-full transition-colors`} />
             <h1 className="text-4xl font-extrabold text-white tracking-widest uppercase">AI Insights</h1>
-            <span className={`text-[9px] font-black ${accentBg}/20 border ${accentBorder}/30 ${accentText} px-2 py-0.5 rounded-full uppercase tracking-widest transition-colors`}>AI</span>
+            <span
+              className={`text-[9px] font-black ${accent.badgeBg} border ${accent.badgeBorder} ${accent.text} px-2 py-0.5 rounded-full uppercase tracking-widest transition-colors`}
+            >
+              AI
+            </span>
           </div>
           <p className="text-white/40 font-medium tracking-wide">
-            Aggregate intelligence from {responseCount} {view === 'parent' ? 'parent' : 'admin'} response{responseCount !== 1 ? 's' : ''}
+            Aggregate intelligence from {responseCount} {audienceLabel}
           </p>
         </div>
 
         <div className="flex items-center gap-6">
-          <div className="bg-[#0c0c0c] border border-white/10 p-1 rounded-xl flex">
-            <button
-              onClick={() => setView('parent')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'parent' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-            >
-              Parents
-            </button>
-            <button
-              onClick={() => setView('school_admin')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${view === 'school_admin' ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-900/50' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-            >
-              Admins
-            </button>
-          </div>
+          <ViewToggle view={view} onChange={setView} />
 
           <div className="flex items-center gap-3">
             {generatedAt && (
@@ -226,7 +303,9 @@ export default function InsightsClient() {
             <button
               onClick={generateInsights}
               disabled={generating}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 ${isStale ? 'bg-amber-500 text-black animate-pulse' : 'bg-white text-black'}`}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 ${
+                isStale ? 'bg-amber-500 text-black animate-pulse' : 'bg-white text-black'
+              }`}
             >
               {generating ? (
                 <span className="flex items-center gap-2">
@@ -236,13 +315,16 @@ export default function InsightsClient() {
                   </svg>
                   Analyzing...
                 </span>
-              ) : isStale ? 'Update Available' : 'Refresh'}
+              ) : isStale ? (
+                'Update Available'
+              ) : (
+                'Refresh'
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Stale Data Banner */}
       {isStale && (
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -265,10 +347,9 @@ export default function InsightsClient() {
         </div>
       )}
 
-      {/* Executive Summary */}
       <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-8">
         <div className="flex items-center gap-2 mb-4">
-          <svg className={`w-4 h-4 ${accentText}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className={`w-4 h-4 ${accent.text}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
           </svg>
           <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Executive Summary</span>
@@ -276,7 +357,6 @@ export default function InsightsClient() {
         <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">{insights.executiveSummary}</p>
       </div>
 
-      {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-5 group hover:border-white/20 transition-all">
           <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-2">Avg Urgency</p>
@@ -299,17 +379,21 @@ export default function InsightsClient() {
         </div>
         <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-5 group hover:border-white/20 transition-all">
           <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-2">Sentiment</p>
-          <p className={`text-sm font-black uppercase ${insights.sentiment?.overall === 'positive' ? 'text-emerald-400' :
-            insights.sentiment?.overall === 'negative' ? 'text-red-400' : 'text-amber-400'
-            }`}>
+          <p
+            className={`text-sm font-black uppercase ${
+              insights.sentiment?.overall === 'positive'
+                ? 'text-emerald-400'
+                : insights.sentiment?.overall === 'negative'
+                ? 'text-red-400'
+                : 'text-amber-400'
+            }`}
+          >
             {insights.sentiment?.overall || '—'}
           </p>
         </div>
       </div>
 
-      {/* Charts Row */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Sentiment Distribution */}
         <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -321,16 +405,17 @@ export default function InsightsClient() {
             <div className="flex items-center justify-center h-48 text-white/20 text-xs">No sentiment data</div>
           )}
           <div className="flex justify-center gap-4 mt-4">
-            {sentimentData.map(s => (
-              <div key={s.name} className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-[10px] text-white/40 font-medium">{s.name}: {s.value}%</span>
+            {sentimentData.map((item) => (
+              <div key={item.name} className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-[10px] text-white/40 font-medium">
+                  {item.name}: {item.value}%
+                </span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Urgency Distribution */}
         <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-orange-500" />
@@ -344,10 +429,17 @@ export default function InsightsClient() {
           {insights.urgencyDistribution && (
             <div className="mt-4 text-center">
               <span className="text-[10px] text-white/30 font-medium">Dominant: </span>
-              <span className={`text-[10px] font-black uppercase ${insights.urgencyDistribution.dominant === 'critical' ? 'text-red-400' :
-                insights.urgencyDistribution.dominant === 'high' ? 'text-orange-400' :
-                  insights.urgencyDistribution.dominant === 'medium' ? 'text-amber-400' : 'text-emerald-400'
-                }`}>
+              <span
+                className={`text-[10px] font-black uppercase ${
+                  insights.urgencyDistribution.dominant === 'critical'
+                    ? 'text-red-400'
+                    : insights.urgencyDistribution.dominant === 'high'
+                    ? 'text-orange-400'
+                    : insights.urgencyDistribution.dominant === 'medium'
+                    ? 'text-amber-400'
+                    : 'text-emerald-400'
+                }`}
+              >
                 {insights.urgencyDistribution.dominant} ({insights.urgencyDistribution.dominantPct}%)
               </span>
             </div>
@@ -355,7 +447,6 @@ export default function InsightsClient() {
         </div>
       </div>
 
-      {/* Themes */}
       <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-6">
           <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -371,29 +462,32 @@ export default function InsightsClient() {
         )}
 
         <div className="space-y-2">
-          {(insights.themes || []).map((theme, i) => (
-            <div key={i} className="border border-white/5 rounded-xl overflow-hidden">
+          {(insights.themes || []).map((theme, index) => (
+            <div key={index} className="border border-white/5 rounded-xl overflow-hidden">
               <button
-                onClick={() => toggleTheme(i)}
+                onClick={() => toggleTheme(index)}
                 className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: FUNNEL_COLORS[i % FUNNEL_COLORS.length] }} />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: FUNNEL_COLORS[index % FUNNEL_COLORS.length] }} />
                   <span className="text-sm font-bold text-white">{theme.theme}</span>
                   <span className="text-[10px] text-white/30 font-mono">{theme.count} mentions</span>
                 </div>
                 <svg
-                  className={`w-4 h-4 text-white/30 transition-transform ${expandedThemes.has(i) ? 'rotate-180' : ''}`}
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                  className={`w-4 h-4 text-white/30 transition-transform ${expandedThemes.has(index) ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              {expandedThemes.has(i) && theme.relatedQuotes && theme.relatedQuotes.length > 0 && (
+              {expandedThemes.has(index) && theme.relatedQuotes && theme.relatedQuotes.length > 0 && (
                 <div className="px-4 pb-4 pt-0 space-y-2 border-t border-white/5">
-                  {theme.relatedQuotes.map((quote, qi) => (
-                    <div key={qi} className="flex gap-2 py-2">
-                      <span className="text-white/10 text-xs mt-0.5">&ldquo;</span>
+                  {theme.relatedQuotes.map((quote, quoteIndex) => (
+                    <div key={quoteIndex} className="flex gap-2 py-2">
+                      <span className="text-white/10 text-xs mt-0.5">“</span>
                       <p className="text-xs text-white/50 italic leading-relaxed">{quote}</p>
                     </div>
                   ))}
@@ -404,7 +498,6 @@ export default function InsightsClient() {
         </div>
       </div>
 
-      {/* Recommendations */}
       <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-6">
           <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -414,24 +507,30 @@ export default function InsightsClient() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {(insights.recommendations || []).map((rec, i) => (
-            <div key={i} className="border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all space-y-3">
-              <p className="text-sm font-bold text-white leading-snug">{rec.recommendation}</p>
+          {(insights.recommendations || []).map((recommendation, index) => (
+            <div key={index} className="border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all space-y-3">
+              <p className="text-sm font-bold text-white leading-snug">{recommendation.recommendation}</p>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Confidence</span>
-                  <span className="text-[10px] font-bold text-white/50">{Math.round(rec.confidence * 100)}%</span>
+                  <span className="text-[10px] font-bold text-white/50">
+                    {Math.round(recommendation.confidence * 100)}%
+                  </span>
                 </div>
                 <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${rec.confidence >= 0.8 ? 'bg-emerald-500' :
-                      rec.confidence >= 0.5 ? 'bg-amber-500' : 'bg-red-500'
-                      }`}
-                    style={{ width: `${rec.confidence * 100}%` }}
+                    className={`h-full rounded-full transition-all ${
+                      recommendation.confidence >= 0.8
+                        ? 'bg-emerald-500'
+                        : recommendation.confidence >= 0.5
+                        ? 'bg-amber-500'
+                        : 'bg-red-500'
+                    }`}
+                    style={{ width: `${recommendation.confidence * 100}%` }}
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-white/30 leading-relaxed">{rec.supportingData}</p>
+              <p className="text-[11px] text-white/30 leading-relaxed">{recommendation.supportingData}</p>
             </div>
           ))}
         </div>

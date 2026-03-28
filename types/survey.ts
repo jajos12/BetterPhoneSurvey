@@ -64,6 +64,9 @@ export interface SurveyFormData {
     // Referral tracking
     knowsOthersWithStress?: boolean;
 
+    // Variant tracking
+    surveyVariant?: string;
+
     // Email
     emailOptIn: boolean;
     email: string;

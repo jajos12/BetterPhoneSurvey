@@ -1,41 +1,58 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { SurveyFormData, SurveyContextType } from '@/types/survey';
 import { getSessionId } from '@/lib/utils';
 
 const SurveyContext = createContext<SurveyContextType | null>(null);
 
-const STORAGE_KEY = 'betterphone_survey_data';
+const DEFAULT_STORAGE_KEY = 'betterphone_survey_data';
+const DEFAULT_SESSION_KEY = 'betterphone_session_id';
 
-export function SurveyProvider({ children }: { children: ReactNode }) {
-    const [sessionId, setSessionId] = useState('');
-    const [formData, setFormData] = useState<Partial<SurveyFormData>>({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const sessionCreatedRef = useRef(false);
+interface SurveyProviderProps {
+    children: ReactNode;
+    storageKey?: string;
+    sessionKey?: string;
+    sessionPrefix?: string;
+    initialData?: Partial<SurveyFormData>;
+}
 
-    // Load session and form data on mount
-    useEffect(() => {
-        const sid = getSessionId();
-        setSessionId(sid);
-
-        // Load from localStorage
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                setFormData(JSON.parse(saved));
-            } catch (e) {
-                console.error('Failed to parse saved data:', e);
-            }
+export function SurveyProvider({
+    children,
+    storageKey = DEFAULT_STORAGE_KEY,
+    sessionKey = DEFAULT_SESSION_KEY,
+    sessionPrefix = 'sess_',
+    initialData = {},
+}: SurveyProviderProps) {
+    const baseFormData = initialData;
+    const [sessionId] = useState(() => getSessionId(sessionPrefix, sessionKey));
+    const [formData, setFormData] = useState<Partial<SurveyFormData>>(() => {
+        if (typeof window === 'undefined') {
+            return baseFormData;
         }
-        setIsLoading(false);
-    }, []);
+
+        const saved = localStorage.getItem(storageKey);
+        if (!saved) {
+            return baseFormData;
+        }
+
+        try {
+            return {
+                ...baseFormData,
+                ...JSON.parse(saved),
+            };
+        } catch (e) {
+            console.error('Failed to parse saved data:', e);
+            return baseFormData;
+        }
+    });
+    const [isLoading] = useState(false);
+    const [error] = useState<string | null>(null);
 
     // Create survey_response record in Supabase on session init
     // This ensures the record exists before any voice recordings are uploaded
     useEffect(() => {
-        if (!sessionId || sessionCreatedRef.current) return;
+        if (!sessionId) return;
 
         const createSession = async () => {
             try {
@@ -50,7 +67,6 @@ export function SurveyProvider({ children }: { children: ReactNode }) {
                 });
 
                 if (response.ok) {
-                    sessionCreatedRef.current = true;
                     console.log('Session created:', sessionId);
                 }
             } catch (err) {
@@ -58,15 +74,15 @@ export function SurveyProvider({ children }: { children: ReactNode }) {
             }
         };
 
-        createSession();
+        void createSession();
     }, [sessionId]);
 
     // Save to localStorage whenever formData changes
     useEffect(() => {
         if (!isLoading && Object.keys(formData).length > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+            localStorage.setItem(storageKey, JSON.stringify(formData));
         }
-    }, [formData, isLoading]);
+    }, [formData, isLoading, storageKey]);
 
     const updateFormData = (data: Partial<SurveyFormData>) => {
         setFormData(prev => ({ ...prev, ...data }));

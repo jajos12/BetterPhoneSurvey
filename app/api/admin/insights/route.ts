@@ -31,9 +31,18 @@ type InsightFormData = {
   issues?: string[];
   benefits?: string[];
   ranking?: string[];
+  ageRanges?: string[];
+  features?: string[];
+  featureRanking?: string[];
+  objectionText?: string;
   priceWillingness?: string[];
   emailOptIn?: boolean;
   kidsWithPhones?: string;
+  currentDevices?: string[];
+  screenedOut?: boolean;
+  screenedOutReferrals?: string[];
+  thankYouReferrals?: string[];
+  bonusText?: string;
   step1Text?: string;
   step2Text?: string;
   step4Text?: string;
@@ -167,14 +176,17 @@ function summarizeUrgency(recordings: InsightRecordingRow[]) {
 
 function collectTextResponses(
   responses: InsightResponseRow[],
-  fieldNames: string[],
+  fieldNames: Array<keyof InsightFormData>,
   limit = 50
 ): string[] {
   const textResponses: string[] = [];
 
   for (const response of responses) {
-    const formData = response.form_data || {};
-    const texts = fieldNames.map((fieldName) => formData[fieldName]).filter(Boolean);
+    const formData = response.form_data;
+    const texts = fieldNames
+      .map((fieldName) => formData?.[fieldName])
+      .filter((value): value is string => typeof value === 'string' && value.length > 0);
+
     if (texts.length > 0 && textResponses.length < limit) {
       textResponses.push(texts.join(' | '));
     }
@@ -187,17 +199,35 @@ function buildCondensedParentContext(
   responses: InsightResponseRow[],
   recordings: InsightRecordingRow[]
 ) {
+  const qualifierFrequency: Record<string, number> = {};
   const issueFrequency: Record<string, number> = {};
   const firstPriorityFrequency: Record<string, number> = {};
+  const ageFrequency: Record<string, number> = {};
+  const featureFrequency: Record<string, number> = {};
+  const featurePriorityFrequency: Record<string, number> = {};
   const priceFrequency: Record<string, number> = {};
   const kidsFrequency: Record<string, number> = {};
+  const deviceFrequency: Record<string, number> = {};
   let completedCount = 0;
   let emailOptInCount = 0;
+  let screenedOutCount = 0;
+  let referralCount = 0;
+  const engagedResponses = responses.filter((response) => !response.form_data?.screenedOut);
 
   for (const response of responses) {
     if (response.is_completed) completedCount += 1;
 
     const formData = response.form_data || {};
+    if (formData.painCheck) {
+      qualifierFrequency[formData.painCheck] = (qualifierFrequency[formData.painCheck] || 0) + 1;
+    }
+
+    if (formData.screenedOut) {
+      screenedOutCount += 1;
+      referralCount += (formData.screenedOutReferrals || []).length;
+      continue;
+    }
+
     for (const issue of formData.issues || []) {
       issueFrequency[issue] = (issueFrequency[issue] || 0) + 1;
     }
@@ -215,25 +245,56 @@ function buildCondensedParentContext(
       kidsFrequency[formData.kidsWithPhones] = (kidsFrequency[formData.kidsWithPhones] || 0) + 1;
     }
 
+    for (const ageRange of formData.ageRanges || []) {
+      ageFrequency[ageRange] = (ageFrequency[ageRange] || 0) + 1;
+    }
+
+    for (const feature of formData.features || []) {
+      featureFrequency[feature] = (featureFrequency[feature] || 0) + 1;
+    }
+
+    const topFeature = formData.featureRanking?.[0] || formData.features?.[0];
+    if (topFeature) {
+      featurePriorityFrequency[topFeature] = (featurePriorityFrequency[topFeature] || 0) + 1;
+    }
+
+    for (const device of formData.currentDevices || []) {
+      deviceFrequency[device] = (deviceFrequency[device] || 0) + 1;
+    }
+
+    referralCount += (formData.thankYouReferrals || []).length;
+
     if (formData.emailOptIn) {
       emailOptInCount += 1;
     }
   }
 
-  const textResponses = collectTextResponses(responses, ['step1Text']);
+  const textResponses = collectTextResponses(engagedResponses, ['step1Text', 'objectionText', 'bonusText']);
   const { avgUrgency, transcriptSamples, totalVoiceDuration, urgencyLevels } = summarizeUrgency(recordings);
-  const optInRate = responses.length > 0 ? Math.round((emailOptInCount / responses.length) * 100) : 0;
+  const optInRate = engagedResponses.length > 0 ? Math.round((emailOptInCount / engagedResponses.length) * 100) : 0;
 
   const context = `
-AGGREGATE CONDENSED PARENT DATA (${responses.length} responses, ${completedCount} completed):
+AGGREGATE CONDENSED PARENT DATA (${responses.length} responses, ${completedCount} completed, ${screenedOutCount} screened out):
+
+Qualifier Distribution: ${formatFrequencyMap(qualifierFrequency, 8)}
 
 Top Issues: ${formatFrequencyMap(issueFrequency, 12)}
 
 Top First-Priority Issues: ${formatFrequencyMap(firstPriorityFrequency, 8)}
 
+Top Desired Features: ${formatFrequencyMap(featureFrequency, 12)}
+
+Top Feature Priorities: ${formatFrequencyMap(featurePriorityFrequency, 8)}
+
 Kids Affected: ${JSON.stringify(kidsFrequency)}
 
+Age Ranges: ${JSON.stringify(ageFrequency)}
+
+Current Devices: ${JSON.stringify(deviceFrequency)}
+
 Price Willingness: ${JSON.stringify(priceFrequency)}
+
+Referral Count Captured: ${referralCount}
 
 Email Opt-In Rate: ${optInRate}%
 

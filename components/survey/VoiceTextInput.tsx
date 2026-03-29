@@ -9,6 +9,8 @@ interface VoiceTextInputProps {
     stepNumber: number;
     placeholder?: string;
     voiceOnly?: boolean;
+    textFieldKey?: string;
+    recordingFieldKey?: string;
 }
 
 type RecordingState = 'idle' | 'recording' | 'saved';
@@ -17,13 +19,15 @@ export function VoiceTextInput({
     sessionId,
     stepNumber,
     placeholder = 'You can type your response here',
-    voiceOnly = false
+    voiceOnly = false,
+    textFieldKey,
+    recordingFieldKey,
 }: VoiceTextInputProps) {
     const { updateFormData, formData } = useSurvey();
 
     // Text state
-    const fieldKey = `step${stepNumber}Text`;
-    const recordingKey = `step${stepNumber}Recording`;
+    const fieldKey = textFieldKey || `step${stepNumber}Text`;
+    const recordingKey = recordingFieldKey || `step${stepNumber}Recording`;
     const data = formData as Record<string, unknown>;
     const savedText = (data[fieldKey] as string) || '';
     const hasRecording = !!(data[recordingKey]);
@@ -46,7 +50,7 @@ export function VoiceTextInput({
         if (newSavedText && newSavedText !== text) {
             setText(newSavedText);
         }
-    }, [data, fieldKey]);
+    }, [data, fieldKey, text]);
 
     const handleTextChange = (newText: string) => {
         setText(newText);
@@ -142,7 +146,7 @@ export function VoiceTextInput({
             console.error('Failed to start recording:', err);
             setError('Could not access microphone');
         }
-    }, [stepNumber, updateFormData, uploadRecording]);
+    }, [recordingKey, updateFormData, uploadRecording]);
 
     const stopRecording = useCallback(() => {
         if (mediaRecorderRef.current && recordingState === 'recording') {

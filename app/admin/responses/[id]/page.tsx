@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { AudioPlayer } from '@/components/admin/AudioPlayer';
 import ActivityTimeline from '@/components/admin/detail/ActivityTimeline';
 import AISummaryCard from '@/components/admin/detail/AISummaryCard';
+import { getCondensedIssueLabel, getCondensedPriceLabel } from '@/config/condensed-parent-survey';
 import {
   getAdminStepTitle,
   getAdminSurveyViewFromResponse,
@@ -14,12 +15,23 @@ import { supabaseAdmin } from '@/lib/supabase-server';
 export const revalidate = 0;
 
 type CondensedParentDetailData = {
+  painCheck?: string;
   step1Text?: string;
   issues?: string[];
   ranking?: string[];
+  ageRanges?: string[];
+  features?: string[];
+  featureRanking?: string[];
+  objectionText?: string;
   priceWillingness?: string[];
   kidsWithPhones?: string;
+  currentDevices?: string[];
   emailOptIn?: boolean;
+  screenedOut?: boolean;
+  screenedOutReferrals?: string[];
+  screenedOutSubmitted?: boolean;
+  thankYouReferrals?: string[];
+  bonusText?: string;
 };
 
 type LongFormParentDetailData = {
@@ -193,18 +205,57 @@ function formatStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.length > 0) : [];
 }
 
+function formatMappedList(value: unknown, formatter: (value: string) => string): string[] {
+  return formatStringList(value).map(formatter);
+}
+
 function renderCondensedParentDetail(formData: CondensedParentDetailData) {
-  const issues = formatStringList(formData.issues);
-  const ranking = formatStringList(formData.ranking);
-  const prices = formatStringList(formData.priceWillingness);
+  const issues = formatMappedList(formData.issues, getCondensedIssueLabel);
+  const ranking = formatMappedList(formData.ranking, getCondensedIssueLabel);
+  const ages = formatStringList(formData.ageRanges);
+  const features = formatStringList(formData.features);
+  const featureRanking = formatStringList(formData.featureRanking);
+  const prices = formatMappedList(formData.priceWillingness, getCondensedPriceLabel);
+  const currentDevices = formatStringList(formData.currentDevices);
+  const screenedOutReferrals = formatStringList(formData.screenedOutReferrals);
+  const thankYouReferrals = formatStringList(formData.thankYouReferrals);
+  const isScreenedOut = Boolean(formData.screenedOut);
+
+  if (isScreenedOut) {
+    return (
+      <div className="space-y-8">
+        <DetailCard eyebrow="Screened Out" title="Qualifier Outcome">
+          <div className="space-y-4">
+            <DetailGrid
+              items={[
+                { label: 'Qualifier response', value: formData.painCheck || 'No concern' },
+                { label: 'Referral submitted', value: formData.screenedOutSubmitted ? 'Yes' : 'No' },
+              ]}
+            />
+            <div>
+              <p className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mb-3">Referral Contacts</p>
+              <DetailPills items={screenedOutReferrals} emptyLabel="No referrals were submitted." />
+            </div>
+          </div>
+        </DetailCard>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <DetailCard eyebrow="Condensed" title="Parent Narrative">
-        <QuoteBlock
-          label="Core concern and what they tried"
-          value={formData.step1Text}
-        />
+        <div className="space-y-4">
+          <DetailGrid
+            items={[
+              { label: 'Qualifier response', value: formData.painCheck },
+              { label: 'Kids affected', value: formData.kidsWithPhones },
+              { label: 'Age ranges', value: ages.join(', ') || null },
+              { label: 'Email opt-in', value: formData.emailOptIn ? 'Yes' : 'No' },
+            ]}
+          />
+          <QuoteBlock label="Core concern and what they tried" value={formData.step1Text} />
+        </div>
       </DetailCard>
 
       <DetailCard eyebrow="Issues" title="Problem Signals">
@@ -220,17 +271,35 @@ function renderCondensedParentDetail(formData: CondensedParentDetailData) {
         </div>
       </DetailCard>
 
-      <DetailCard eyebrow="Offer Fit" title="Household and Pricing">
+      <DetailCard eyebrow="Feature Fit" title="What They Want Most">
+        <div className="space-y-5">
+          <div>
+            <p className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mb-3">Selected Features</p>
+            <DetailPills items={features} emptyLabel="No features selected." />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mb-3">Feature Ranking</p>
+            <DetailList items={featureRanking} emptyLabel="No feature ranking recorded." />
+          </div>
+        </div>
+      </DetailCard>
+
+      <DetailCard eyebrow="Switching" title="Barriers, Bonus, and Referrals">
         <div className="space-y-5">
           <DetailGrid
             items={[
-              { label: 'Kids affected', value: formData.kidsWithPhones },
-              { label: 'Email opt-in', value: formData.emailOptIn ? 'Yes' : 'No' },
+              { label: 'Current devices', value: currentDevices.join(', ') || null },
             ]}
           />
+          <QuoteBlock label="What would still stop them from switching" value={formData.objectionText} />
+          <QuoteBlock label="Bonus detail" value={formData.bonusText} />
           <div>
             <p className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mb-3">Max Price Willingness</p>
             <DetailPills items={prices} emptyLabel="No price range recorded." />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mb-3">Thank-You Referrals</p>
+            <DetailPills items={thankYouReferrals} emptyLabel="No thank-you referrals recorded." />
           </div>
         </div>
       </DetailCard>

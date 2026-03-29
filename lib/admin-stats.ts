@@ -92,6 +92,16 @@ function buildFunnel(responses: ResponseRow[], surveyView: AdminSurveyView): Fun
   const stepCounts = new Map<string, number>(surveySteps.map((step) => [step.id, 0]));
 
   for (const response of responses) {
+    const isScreenedOut =
+      surveyView === 'parent_condensed' &&
+      (response.current_step === 'no-path' || response.form_data?.screenedOut === true);
+
+    if (isScreenedOut) {
+      const qualifierStepId = 'qualifier';
+      stepCounts.set(qualifierStepId, (stepCounts.get(qualifierStepId) || 0) + 1);
+      continue;
+    }
+
     if (response.is_completed || response.current_step === 'thank-you') {
       for (const step of surveySteps) {
         stepCounts.set(step.id, (stepCounts.get(step.id) || 0) + 1);

@@ -1,6 +1,6 @@
 import type { PainCheckValue } from './survey';
 
-export type ParentSurveyVariant = 'long_form' | 'condensed_v6';
+export type ParentSurveyVariant = 'long_form' | 'condensed_v6' | 'condensed_v7';
 export type AdminSurveyView = 'all' | 'parent_long' | 'parent_condensed' | 'school_admin';
 
 // Dashboard stats

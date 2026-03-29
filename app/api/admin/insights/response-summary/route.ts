@@ -11,10 +11,19 @@ type SummaryFormData = {
   issues?: string[];
   benefits?: string[];
   ranking?: string[];
+  ageRanges?: string[];
+  features?: string[];
+  featureRanking?: string[];
+  objectionText?: string;
   priceWillingness?: string[];
   emailOptIn?: boolean;
   email?: string;
   kidsWithPhones?: string;
+  currentDevices?: string[];
+  screenedOut?: boolean;
+  screenedOutReferrals?: string[];
+  thankYouReferrals?: string[];
+  bonusText?: string;
   step1Text?: string;
   step2Text?: string;
   step4Text?: string;
@@ -69,15 +78,37 @@ function buildSummaryContext(
   }
 
   if (surveyView === 'parent_condensed') {
+    if (formData.screenedOut) {
+      return {
+        systemPrompt:
+          'You are analyzing a screened-out BetterPhone parent survey response that ended in the referral branch. Return ONLY valid JSON matching the exact schema provided.',
+        context: [
+          `Qualifier Response: ${formData.painCheck || 'N/A'}`,
+          `Referral Contacts: ${(formData.screenedOutReferrals || []).join(', ') || 'N/A'}`,
+          `Email: ${formData.email || 'N/A'}`,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      };
+    }
+
     return {
       systemPrompt:
         "You are analyzing a condensed BetterPhone parent survey response about a child's relationship with screens. Return ONLY valid JSON matching the exact schema provided.",
       context: [
+        `Qualifier Response: ${formData.painCheck || 'N/A'}`,
         `Core Narrative: ${formData.step1Text || 'N/A'}`,
         `Issues: ${(formData.issues || []).join(', ') || 'N/A'}`,
         `Priority Ranking: ${(formData.ranking || []).join(', ') || 'N/A'}`,
         `Kids Affected: ${formData.kidsWithPhones || 'N/A'}`,
+        `Age Ranges: ${(formData.ageRanges || []).join(', ') || 'N/A'}`,
+        `Desired Features: ${(formData.features || []).join(', ') || 'N/A'}`,
+        `Feature Ranking: ${(formData.featureRanking || []).join(', ') || 'N/A'}`,
+        `Switching Barriers: ${formData.objectionText || 'N/A'}`,
+        `Bonus Detail: ${formData.bonusText || 'N/A'}`,
+        `Current Devices: ${(formData.currentDevices || []).join(', ') || 'N/A'}`,
         `Price Willingness: ${(formData.priceWillingness || []).join(', ') || 'N/A'}`,
+        `Thank-You Referrals: ${(formData.thankYouReferrals || []).join(', ') || 'N/A'}`,
         `Email Opt-In: ${formData.emailOptIn ? 'Yes' : 'No'}`,
         `Email: ${formData.email || 'N/A'}`,
         transcripts ? `\nVoice Transcripts:\n${transcripts}` : '',

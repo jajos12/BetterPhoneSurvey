@@ -1,10 +1,13 @@
-import { CONDENSED_STEPS, CONDENSED_VARIANT } from '@/config/condensed-parent-survey';
+import { CONDENSED_STEPS, isCondensedVariant } from '@/config/condensed-parent-survey';
 import { ADMIN_STEPS } from '@/config/school-admin-steps';
 import { STEPS } from '@/config/steps';
 import type { AdminSurveyView, ParentSurveyVariant } from '@/types/admin';
 import type { StepConfig } from '@/types/survey';
 
-type AdminStepDefinition = Pick<StepConfig, 'id' | 'path' | 'title' | 'description'>;
+type AdminStepDefinition = Pick<StepConfig, 'id' | 'path' | 'title' | 'description'> & {
+  includeInFunnel?: boolean;
+};
+type ConcreteAdminSurveyView = Exclude<AdminSurveyView, 'all'>;
 
 type ResponseLike = {
   survey_type?: string | null;
@@ -37,7 +40,7 @@ const VIEW_META: Record<
   parent_condensed: {
     label: 'Parent Condensed',
     shortLabel: 'Parents (Condensed)',
-    description: 'New condensed parent survey focused on one narrative question, issues, pricing, and opt-in.',
+    description: 'Condensed parent survey with qualifier routing, ranked issues, priority features, objections, referrals, and optional bonus questions.',
     audienceLabel: 'condensed parent responses',
   },
   school_admin: {
@@ -48,7 +51,7 @@ const VIEW_META: Record<
   },
 };
 
-export const DEFAULT_ADMIN_SURVEY_VIEW: AdminSurveyView = 'parent_condensed';
+export const DEFAULT_ADMIN_SURVEY_VIEW: ConcreteAdminSurveyView = 'parent_condensed';
 
 export const ADMIN_SURVEY_VIEW_OPTIONS = [
   { id: 'parent_condensed', label: VIEW_META.parent_condensed.shortLabel },
@@ -73,11 +76,12 @@ export function normalizeAdminSurveyView(value?: string | null): AdminSurveyView
 }
 
 export function getParentSurveyVariant(formData?: Record<string, unknown> | null): ParentSurveyVariant {
-  return formData?.surveyVariant === CONDENSED_VARIANT ? 'condensed_v6' : 'long_form';
+  const surveyVariant = typeof formData?.surveyVariant === 'string' ? formData.surveyVariant : null;
+  return isCondensedVariant(surveyVariant) ? surveyVariant : 'long_form';
 }
 
 export function isCondensedParentVariant(formData?: Record<string, unknown> | null): boolean {
-  return getParentSurveyVariant(formData) === 'condensed_v6';
+  return getParentSurveyVariant(formData) !== 'long_form';
 }
 
 export function getAdminSurveyViewFromResponse(response: ResponseLike): Exclude<AdminSurveyView, 'all'> {
@@ -130,7 +134,9 @@ export function getStepConfigForSurveyView(view: AdminSurveyView): readonly Admi
 }
 
 export function getVisibleStepsForSurveyView(view: AdminSurveyView): readonly AdminStepDefinition[] {
-  return getStepConfigForSurveyView(view).filter((step) => step.id !== 'thank-you');
+  return getStepConfigForSurveyView(view).filter(
+    (step) => step.id !== 'thank-you' && step.includeInFunnel !== false
+  );
 }
 
 export function getDefaultStepIdForSurveyView(view: AdminSurveyView): string {
@@ -138,7 +144,7 @@ export function getDefaultStepIdForSurveyView(view: AdminSurveyView): string {
     case 'school_admin':
       return 'disruption-gate';
     case 'parent_condensed':
-      return '1';
+      return 'qualifier';
     case 'all':
     case 'parent_long':
     default:
@@ -155,6 +161,10 @@ export function getAdminStepTitle(view: AdminSurveyView, stepId?: string | null)
     return 'Completed';
   }
 
+  if (view === 'parent_condensed' && stepId === '5') {
+    return 'Bonus';
+  }
+
   const matchingStep = getStepConfigForSurveyView(view).find((step) => step.id === stepId);
   if (matchingStep) {
     return matchingStep.title;
@@ -165,6 +175,11 @@ export function getAdminStepTitle(view: AdminSurveyView, stepId?: string | null)
 
 export function getResponseCurrentStepTitle(response: ResponseLike): string {
   const view = getAdminSurveyViewFromResponse(response);
+  const isScreenedOut = view === 'parent_condensed' && Boolean(response.form_data?.screenedOut);
+
+  if (isScreenedOut && response.current_step === 'no-path') {
+    return getAdminStepTitle(view, 'no-path');
+  }
 
   if (response.is_completed) {
     return 'Completed';
@@ -180,20 +195,27 @@ export function getResponseCurrentStepTitle(response: ResponseLike): string {
 export function getResponseProgressPercent(response: ResponseLike): number {
   const view = getAdminSurveyViewFromResponse(response);
   const steps = getVisibleStepsForSurveyView(view);
+  const isScreenedOut = Boolean(response.form_data?.screenedOut);
 
   if (steps.length === 0) {
     return 0;
   }
 
-  if (response.is_completed || response.current_step === 'thank-you') {
+  if ((response.is_completed || response.current_step === 'thank-you') && !isScreenedOut) {
     return 100;
   }
 
   const fallbackStep = getDefaultStepIdForSurveyView(view);
   const currentStep =
-    response.current_step && response.current_step !== 'unknown' && response.current_step !== 'intro'
+    view === 'parent_condensed' && response.current_step === 'no-path'
+      ? 'qualifier'
+      : response.current_step && response.current_step !== 'unknown' && response.current_step !== 'intro'
       ? response.current_step
       : fallbackStep;
+
+  if (view === 'parent_condensed' && currentStep === 'bonus') {
+    return 100;
+  }
 
   const index = steps.findIndex((step) => step.id === currentStep);
   if (index === -1) {

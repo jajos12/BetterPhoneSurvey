@@ -17,6 +17,21 @@ export interface SurveyFormData {
     // Step 3: Ranking
     ranking: string[];
 
+    // Condensed v7 additions
+    ageRanges?: string[];
+    features?: string[];
+    featureRanking?: string[];
+    objectionText?: string;
+    objectionRecording?: boolean;
+    screenedOut?: boolean;
+    screenedOutSubmitted?: boolean;
+    screenedOutReferrals?: string[];
+    thankYouReferrals?: string[];
+    bonusText?: string;
+    bonusRecording?: boolean;
+    bonusSubmitted?: boolean;
+    currentDevices?: string[];
+
     // Step 4: Voice - Urgency
     step4Text?: string;
     step4Recording?: boolean;

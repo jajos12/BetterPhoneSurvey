@@ -10,7 +10,7 @@ import {
     CONDENSED_STORAGE_KEY,
     CONDENSED_VARIANT,
 } from '@/config/condensed-parent-survey';
-import { getSessionId } from '@/lib/utils';
+import { generateSessionId, getSessionId } from '@/lib/utils';
 
 export default function HomePage() {
     const router = useRouter();
@@ -48,7 +48,6 @@ export default function HomePage() {
             return;
         }
 
-        getSessionId(CONDENSED_SESSION_PREFIX, CONDENSED_SESSION_KEY);
         const existing = localStorage.getItem(CONDENSED_STORAGE_KEY);
         let existingData: Record<string, unknown> = {};
 
@@ -60,16 +59,42 @@ export default function HomePage() {
             }
         }
 
+        const shouldResetSession = Boolean(
+            existingData.isCompleted || existingData.screenedOutSubmitted || existingData.bonusSubmitted
+        );
+        const sessionId = shouldResetSession
+            ? generateSessionId(CONDENSED_SESSION_PREFIX)
+            : getSessionId(CONDENSED_SESSION_PREFIX, CONDENSED_SESSION_KEY);
+
+        if (shouldResetSession) {
+            localStorage.setItem(CONDENSED_SESSION_KEY, sessionId);
+            existingData = {};
+        }
+
         localStorage.setItem(
             CONDENSED_STORAGE_KEY,
             JSON.stringify({
                 ...existingData,
                 email: trimmedEmail,
+                emailOptIn: existingData.emailOptIn ?? true,
                 surveyVariant: CONDENSED_VARIANT,
             })
         );
 
-        router.push('/step/1');
+        void fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId,
+                email: trimmedEmail,
+                emailOptIn: existingData.emailOptIn ?? true,
+                surveyVariant: CONDENSED_VARIANT,
+                currentStep: 'intro',
+                isCompleted: false,
+            }),
+        });
+
+        router.push('/step/qualifier');
     };
 
     return (
@@ -93,16 +118,16 @@ export default function HomePage() {
                             </div>
 
                             <p className="text-text-secondary text-base sm:text-lg mb-3 sm:mb-4 leading-relaxed">
-                                We&apos;re a group of parents and child development researchers working to create a phone that puts children&apos;s well-being first.
+                                We&apos;re a group of parents and child development researchers working to create a phone that puts children&apos;s well-being first. Your honest words shape what we build.
                             </p>
 
                             <p className="text-text-secondary text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed">
-                                This is the new condensed version from the reference HTML, rebuilt on top of the live app so we keep the real save flow, voice capture, and admin visibility.
+                                This version follows the latest condensed flow and keeps the real BetterPhone save flow, voice capture, and admin visibility intact.
                             </p>
 
                             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
                                 <div className="trust-badge">
-                                    <span>~1 minute</span>
+                                    <span>~3 minutes</span>
                                 </div>
                                 <div className="trust-badge">
                                     <span>Confidential</span>

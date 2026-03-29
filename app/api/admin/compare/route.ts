@@ -47,21 +47,26 @@ export async function POST(request: NextRequest) {
           painCheck: formData.painCheck || null,
           issues: formData.issues || [],
           ranking: formData.ranking || [],
-          benefits: formData.benefits || [],
+          benefits: formData.benefits || formData.features || [],
           transcripts: (recordingsResult.data || [])
             .filter(r => r.transcript)
             .map(r => ({ stepNumber: r.step_number, transcript: r.transcript })),
           aiSummary: response.ai_summary || null,
           formData: {
             kidAges: formData.kidAges,
+            ageRanges: formData.ageRanges,
             kidsWithPhones: formData.kidsWithPhones,
             currentDevice: formData.currentDevice,
+            currentDevices: formData.currentDevices,
             deviceDuration: formData.deviceDuration,
             priceWillingness: formData.priceWillingness,
             step1Text: formData.step1Text,
             step4Text: formData.step4Text,
             step5Text: formData.step5Text,
             step6Text: formData.step6Text,
+            objectionText: formData.objectionText,
+            bonusText: formData.bonusText,
+            screenedOut: formData.screenedOut,
           },
         };
 

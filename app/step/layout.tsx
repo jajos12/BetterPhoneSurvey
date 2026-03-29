@@ -20,7 +20,7 @@ export default function CondensedSurveyLayout({
                 storageKey={CONDENSED_STORAGE_KEY}
                 sessionKey={CONDENSED_SESSION_KEY}
                 sessionPrefix={CONDENSED_SESSION_PREFIX}
-                initialData={{ surveyVariant: CONDENSED_VARIANT }}
+                initialData={{ surveyVariant: CONDENSED_VARIANT, emailOptIn: true }}
             >
                 <main className="container-survey">
                     {children}
